@@ -1,0 +1,14 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "topo": {
+      "dependsOn": ["^topo"]
+    },
+    "solve": {
+      "dependsOn": ["topo"]
+    },
+    "test": {
+      "dependsOn": ["topo"]
+    }
+  }
+}

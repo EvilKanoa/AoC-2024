@@ -1,0 +1,21 @@
+{
+  "name": "aoc-2023",
+  "module": "src/index.ts",
+  "type": "module",
+  "workspaces": [
+    "days/*",
+    "shared"
+  ],
+  "scripts": {
+    "scaffold": "bun run --cwd scaffold scaffold",
+    "solve": "turbo run solve --concurrency 1",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "turbo": "^1.10.16"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "scaffold",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "scaffold": "bun run src/index.ts"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "commander": "^11.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

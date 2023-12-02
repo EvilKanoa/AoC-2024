@@ -1,0 +1,19 @@
+{
+  "name": "<DAY_NUM>",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "solve": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "shared": "workspace:*"
+  },
+  "devDependencies": {
+    "<PREV_DAY_NUM>": "workspace:*",
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
