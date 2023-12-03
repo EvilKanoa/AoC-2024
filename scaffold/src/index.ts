@@ -37,5 +37,6 @@ await updateFileWithReplace(`../days/${dayNum}/input.txt`, {
   ["<DAY_INPUT>"]: data.input,
 });
 await updateFileWithReplace(`../days/${dayNum}/src/solve.ts`, {
-  ["<DAY_DESCRIPTION>"]: asComment(data.question),
+  ["<DAY_DESCRIPTION_1>"]: asComment(data.question.p1),
+  ["<DAY_DESCRIPTION_2>"]: asComment(data.question.p2),
 });
