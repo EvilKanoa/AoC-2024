@@ -236,3 +236,5 @@ dist
 
 # Turbo
 .turbo
+
+config.json

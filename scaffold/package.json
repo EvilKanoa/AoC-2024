@@ -6,8 +6,11 @@
     "scaffold": "bun run src/index.ts"
   },
   "devDependencies": {
+    "@types/turndown": "^5.0.4",
     "bun-types": "latest",
-    "commander": "^11.1.0"
+    "cheerio": "^1.0.0-rc.12",
+    "commander": "^11.1.0",
+    "turndown": "^7.1.2"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
