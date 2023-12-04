@@ -51,7 +51,7 @@ export const fetchDay = async (
       });
       return {
         p1: service.turndown(parts?.[0] ?? ""),
-        p2: service.turndown(parts?.[1] ?? []),
+        p2: service.turndown(parts?.[1] ?? ""),
       };
     });
 
