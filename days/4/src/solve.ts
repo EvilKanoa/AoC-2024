@@ -1,4 +1,4 @@
-import { Solver } from "shared";
+import { Solver, keyBy } from "shared";
 
 // --- Day 4: Scratchcards ---
 // ----------------------------
@@ -41,8 +41,8 @@ import { Solver } from "shared";
 
 interface Card {
   id: number;
-  winning: string[];
-  picked: string[];
+  winning: Set<string>;
+  picked: Set<string>;
 }
 
 const parseLine = (line: string): Card => {
@@ -54,14 +54,27 @@ const parseLine = (line: string): Card => {
 
   return {
     id: parseInt(match[1], 10),
-    winning: match[2].trim().split(" ").map(l => l.trim()).filter((l) => l.length),
-    picked: match[3].trim().split(" ").map(l => l.trim()).filter((l) => l.length),
+    winning: new Set(
+      match[2]
+        .trim()
+        .split(" ")
+        .map((l) => l.trim())
+        .filter((l) => l.length)
+    ),
+    picked: new Set(
+      match[3]
+        .trim()
+        .split(" ")
+        .map((l) => l.trim())
+        .filter((l) => l.length)
+    ),
   };
 };
 
 const getCardScore = (card: Card): number => {
-  const wins = new Set(card.winning);
-  const numWins = card.picked.filter((p) => wins.has(p)).length;
+  const numWins = [...card.picked.values()].filter((p) =>
+    card.winning.has(p)
+  ).length;
 
   if (numWins <= 0) {
     return 0;
@@ -76,6 +89,48 @@ export const partA: Solver = (lines: string[]) =>
     .map(getCardScore)
     .reduce((a, b) => a + b);
 
+const getCardsWon = (cards: Record<string, Card>, card: Card): Card[] => {
+  const cardCache = {} as Record<string, Card[]>;
+  const getWonCards = (card: Card) => {
+    if (cardCache[card.id] != null) {
+      return cardCache[card.id];
+    }
+
+    const winCount = [...card.picked.values()].filter((v) =>
+      card.winning.has(v)
+    ).length;
+
+    if (winCount <= 0) {
+      return [];
+    }
+
+    const won = [] as Card[];
+    for (let id = card.id + 1; id <= card.id + winCount; id++) {
+      won.push(cards[id]);
+    }
+
+    cardCache[card.id] = won;
+
+    return won;
+  };
+
+  const wonCards = [] as Card[];
+  const queue = [card] as Card[];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+
+    const won = getWonCards(current);
+    wonCards.push(...won);
+    queue.push(...won);
+  }
+
+  return wonCards;
+};
+
 export const partB: Solver = (lines: string[]) => {
-  return 0;
+  const cards = keyBy(lines.map(parseLine), "id");
+  const cardValues = Object.values(cards);
+  const wonCards = cardValues.flatMap((card) => getCardsWon(cards, card));
+
+  return cardValues.length + wonCards.length;
 };
