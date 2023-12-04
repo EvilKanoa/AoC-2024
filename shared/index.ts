@@ -1,5 +1,7 @@
 import { file } from "bun";
 
+export { SparseGrid } from "./sparse-grid";
+
 export type Solver = (lines: string[]) => number;
 
 const parseFile = async (path: string) => {
