@@ -238,3 +238,4 @@ dist
 .turbo
 
 config.json
+**/input.txt
