@@ -106,8 +106,8 @@ import { Solver } from "shared";
 // _What is the lowest location number that corresponds to any of the initial seed numbers?_
 
 type RangedMap = Array<{
-  srcStart: number;
-  srcEnd: number;
+  start: number;
+  end: number;
   offset: number;
 }>;
 
@@ -122,9 +122,19 @@ interface Almanac {
   ["humidity-to-location"]: RangedMap;
 }
 
+const MAP_ORDER = [
+  "seed-to-soil",
+  "soil-to-fertilizer",
+  "fertilizer-to-water",
+  "water-to-light",
+  "light-to-temperature",
+  "temperature-to-humidity",
+  "humidity-to-location",
+] as const;
+
 const getMappedValue = (map: RangedMap, source: number): number => {
   for (const mapping of map) {
-    if (source >= mapping.srcStart && source <= mapping.srcEnd) {
+    if (source >= mapping.start && source <= mapping.end) {
       return source + mapping.offset;
     }
   }
@@ -132,18 +142,8 @@ const getMappedValue = (map: RangedMap, source: number): number => {
 };
 
 const seedToLocation = (almanac: Almanac, seed: number): number => {
-  const keyOrder = [
-    "seed-to-soil",
-    "soil-to-fertilizer",
-    "fertilizer-to-water",
-    "water-to-light",
-    "light-to-temperature",
-    "temperature-to-humidity",
-    "humidity-to-location",
-  ] as (keyof Almanac)[];
-
   let val = seed;
-  for (const key of keyOrder) {
+  for (const key of MAP_ORDER) {
     val = getMappedValue(almanac[key] as RangedMap, val);
   }
 
@@ -180,8 +180,8 @@ const parseInput = (lines: string[]) => {
         .split(" ")
         .map((x) => parseInt(x, 10));
       ((almanac as any)[currentKey] as RangedMap).push({
-        srcEnd: srcStart + length - 1,
-        srcStart,
+        end: srcStart + length - 1,
+        start: srcStart,
         offset: destStart - srcStart,
       });
     }
@@ -197,23 +197,152 @@ export const partA: Solver = (lines: string[]) => {
   );
 };
 
+interface IRange {
+  start: number;
+  end: number;
+  empty?: boolean;
+}
+
+const EMPTY_RANGE = { start: 0, end: -1, empty: true } as const;
+
+const toRange = (
+  range: { start: number } & ({ end: number } | { length: number })
+): IRange => {
+  if ("length" in range && "end" in range) {
+    throw new Error("end and length are exclusive options, use only one");
+  }
+
+  let end = "end" in range ? range.end : range.start + range.length - 1;
+
+  if (end < range.start) {
+    return EMPTY_RANGE;
+  }
+
+  return { start: range.start, end };
+};
+
+const intersectionRange = (a: IRange, b: IRange): IRange => {
+  if (a.empty || b.empty || a.end < b.start || b.end < a.start) {
+    return EMPTY_RANGE;
+  }
+
+  return { start: Math.max(a.start, b.start), end: Math.min(a.end, b.end) };
+};
+
+const offsetRange = ({ start, end }: IRange, offset: number): IRange => ({
+  start: start + offset,
+  end: end + offset,
+});
+
+const subtractRange = (
+  a: IRange,
+  b: IRange,
+  intersectionCache?: IRange
+): IRange[] => {
+  const intersection = intersectionCache ?? intersectionRange(a, b);
+
+  if (intersection.empty) {
+    return [{ ...a }];
+  }
+  // else if (a.start < b.start && a.end > b.end) {
+  //   return [{ start: a.start, end: intersection.start - 1}, {start: intersection.end + 1, end: a.end}];
+  // } else if (a.start > b.start && a.end < b.end) {
+  //   return [];
+  // } else if (b.start >= a.end) {
+  //   return [{start: a.start, end: intersection.start - 1}];
+  // } else if (b.end >= a.start) {
+  //   return [{start: intersection.end + 1, end: a.end}];
+  // }
+  return [
+    { start: a.start, end: intersection.start - 1 },
+    { start: intersection.end + 1, end: a.end },
+  ]
+    .map(toRange)
+    .filter((r) => !r.empty);
+  // cases:
+  // 1. no overlap, return a
+  // 2. a is around b, two ranges are returned from left and right of intersection: a.start to intersection.start - 1, intersection.end + 1 to a.end
+  // 3. a is fully surrounded by b, return no ranges
+  // 4. b overlaps partially with right of a, return range that is a.start to intersection.start - 1
+  // 5. b overlaps partially with left of a, return range that is intersection.end + 1 to a.end
+};
+
+const parseSeedRanges = (almanac: Almanac): IRange[] => {
+  if (almanac.seeds.length % 2 !== 0) {
+    throw new Error("cannot parse as ranges when odd number of seeds");
+  }
+
+  const ranges = [] as IRange[];
+  for (let i = 0; i < almanac.seeds.length / 2; i++) {
+    ranges.push(
+      toRange({ start: almanac.seeds[i * 2], length: almanac.seeds[i * 2 + 1] })
+    );
+  }
+
+  return ranges;
+};
+
 export const partB: Solver = (lines: string[]) => {
   const almanac = parseInput(lines);
-  const ranges = [...almanac.seeds];
-  let min = Number.MAX_SAFE_INTEGER;
+  let ranges = parseSeedRanges(almanac);
 
-  while (ranges.length >= 2) {
-    const start = ranges.shift()!;
-    const length = ranges.shift()!;
-    console.log(
-      `current min: ${min}, processing seed ${start} to ${
-        start + length - 1
-      } now, ${Math.floor(1 + ranges.length / 2)} ranges left...`
-    );
-    for (let seed = start; seed < start + length; seed++) {
-      const loc = seedToLocation(almanac, seed);
-      if (loc < min) min = loc;
+  for (const mapKey of MAP_ORDER) {
+    const nextRanges = [] as IRange[];
+
+    for (const inputRange of ranges) {
+      const queue = [inputRange];
+      while (queue.length) {
+        const range = queue.pop()!;
+
+        let foundMapping = false;
+        for (const mapping of almanac[mapKey]) {
+          const intersection = intersectionRange(range, mapping);
+          if (intersection.empty) {
+            continue;
+          }
+
+          queue.push(...subtractRange(range, intersection));
+          nextRanges.push(offsetRange(intersection, mapping.offset));
+          foundMapping = true;
+          break;
+        }
+
+        if (!foundMapping) {
+          nextRanges.push(range);
+        }
+      }
+    }
+    ranges = nextRanges;
+  }
+
+  let min = Number.MAX_SAFE_INTEGER;
+  for (const range of ranges) {
+    if (range.start < min) {
+      min = range.start;
     }
   }
+
   return min;
 };
+
+// slow, brute force approach, took 9.5 minutes on M1 Pro
+// export const partB: Solver = (lines: string[]) => {
+//   const almanac = parseInput(lines);
+//   const ranges = [...almanac.seeds];
+//   let min = Number.MAX_SAFE_INTEGER;
+
+//   while (ranges.length >= 2) {
+//     const start = ranges.shift()!;
+//     const length = ranges.shift()!;
+//     console.log(
+//       `current min: ${min}, processing seed ${start} to ${
+//         start + length - 1
+//       } now, ${Math.floor(1 + ranges.length / 2)} ranges left...`
+//     );
+//     for (let seed = start; seed < start + length; seed++) {
+//       const loc = seedToLocation(almanac, seed);
+//       if (loc < min) min = loc;
+//     }
+//   }
+//   return min;
+// };
