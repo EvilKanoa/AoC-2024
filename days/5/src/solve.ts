@@ -150,7 +150,7 @@ const seedToLocation = (almanac: Almanac, seed: number): number => {
   return val;
 };
 
-const parseInput = (lines: string[], rangedSeeds = false) => {
+const parseInput = (lines: string[]) => {
   const almanac: Almanac = {
     seeds: lines[0]
       .split(":")[1]
@@ -166,19 +166,6 @@ const parseInput = (lines: string[], rangedSeeds = false) => {
     ["temperature-to-humidity"]: [],
     ["humidity-to-location"]: [],
   };
-
-  if (rangedSeeds) {
-    const seedRanges = almanac.seeds;
-    almanac.seeds = [];
-
-    while (seedRanges.length >= 2) {
-      const start = seedRanges.shift()!;
-      const length = seedRanges.shift()!;
-      for (let seed = start; seed < start + length; seed++) {
-        almanac.seeds.push(seed);
-      }
-    }
-  }
 
   let currentKey = null;
   for (let i = 2; i < lines.length; i++) {
@@ -211,13 +198,22 @@ export const partA: Solver = (lines: string[]) => {
 };
 
 export const partB: Solver = (lines: string[]) => {
-  const almanac = parseInput(lines, true);
+  const almanac = parseInput(lines);
+  const ranges = [...almanac.seeds];
   let min = Number.MAX_SAFE_INTEGER;
-  let i = 0;
-  for (const seed of almanac.seeds) {
-    console.log(`${++i} of ${almanac.seeds.length}`);
-    const loc = seedToLocation(almanac, seed);
-    if (loc < min) min = loc;
+
+  while (ranges.length >= 2) {
+    const start = ranges.shift()!;
+    const length = ranges.shift()!;
+    console.log(
+      `current min: ${min}, processing seed ${start} to ${
+        start + length - 1
+      } now, ${Math.floor(1 + ranges.length / 2)} ranges left...`
+    );
+    for (let seed = start; seed < start + length; seed++) {
+      const loc = seedToLocation(almanac, seed);
+      if (loc < min) min = loc;
+    }
   }
   return min;
 };
