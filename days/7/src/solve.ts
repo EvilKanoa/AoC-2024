@@ -132,23 +132,83 @@ const computeHandType = (cards: HandCards): HandType => {
   }
 };
 
-const parseHand = (line: string): Hand => {
+const computeHandTypeB = (cards: HandCards): HandType => {
+  const countTable = cards.reduce((acc, card) => {
+    acc[card] = (acc[card] ?? 0) + 1;
+    return acc;
+  }, {} as Record<Card, number>);
+  const numJokers = countTable["J"] ?? 0;
+  const counts = Object.entries(countTable)
+    .filter(([k]) => k !== "J")
+    .sort((a, b) => b[1] - a[1]);
+
+  switch (counts[0]?.[1]) {
+    case 5:
+      return HandType.FIVE_OF_A_KIND;
+    case 4:
+      return numJokers >= 1 ? HandType.FIVE_OF_A_KIND : HandType.FOUR_OF_A_KIND;
+    case 3:
+      return numJokers >= 2
+        ? HandType.FIVE_OF_A_KIND
+        : numJokers >= 1
+        ? HandType.FOUR_OF_A_KIND
+        : counts.length >= 2 && counts[1][1] === 2
+        ? HandType.FULL_HOUSE
+        : HandType.THREE_OF_A_KIND;
+    case 2:
+      return numJokers >= 3
+        ? HandType.FIVE_OF_A_KIND
+        : numJokers >= 2
+        ? HandType.FOUR_OF_A_KIND
+        : numJokers >= 1
+        ? counts.length >= 2 && counts[1][1] === 2
+          ? HandType.FULL_HOUSE
+          : HandType.THREE_OF_A_KIND
+        : counts.length >= 2 && counts[1][1] === 2
+        ? HandType.TWO_PAIR
+        : HandType.ONE_PAIR;
+    default: {
+      switch (numJokers) {
+        case 1:
+          return HandType.ONE_PAIR;
+        case 2:
+          return HandType.THREE_OF_A_KIND;
+        case 3:
+          return HandType.FOUR_OF_A_KIND;
+        case 4:
+        case 5:
+          return HandType.FIVE_OF_A_KIND;
+        default:
+          return HandType.HIGH_CARD;
+      }
+    }
+  }
+};
+
+const parseHand = (
+  line: string,
+  handTypeParser: (cards: HandCards) => HandType = computeHandType
+): Hand => {
   const [cardsPart, bidPart] = line.split(" ");
   const cards = [...cardsPart] as HandCards;
   const bid = parseInt(bidPart, 10);
-  const type = computeHandType(cards);
+  const type = handTypeParser(cards);
 
   return { cards, bid, type };
 };
 
-const compareHands = (a: Hand, b: Hand): number => {
+const compareHands = (
+  a: Hand,
+  b: Hand,
+  strengthValues: Record<Card, number>
+): number => {
   const typeDiff = b.type - a.type;
   if (typeDiff !== 0) {
     return typeDiff;
   }
 
   for (let i = 0; i < a.cards.length; i++) {
-    const cardDiff = CARD_STRENGTH[b.cards[i]] - CARD_STRENGTH[a.cards[i]];
+    const cardDiff = strengthValues[b.cards[i]] - strengthValues[a.cards[i]];
     if (cardDiff !== 0) {
       return cardDiff;
     }
@@ -159,13 +219,34 @@ const compareHands = (a: Hand, b: Hand): number => {
 
 export const partA: Solver = (lines: string[]) => {
   const hands = lines
-    .map(parseHand)
-    .sort(compareHands)
+    .map((l) => parseHand(l))
+    .sort((a, b) => compareHands(a, b, CARD_STRENGTH))
     .map((hand, idx, self) => ({ ...hand, rank: self.length - idx }));
 
   return hands.map((hand) => hand.bid * hand.rank).reduce((a, b) => a + b);
 };
 
+const CARD_STRENGTH_B = {
+  A: 13,
+  K: 12,
+  Q: 11,
+  T: 10,
+  "9": 9,
+  "8": 8,
+  "7": 7,
+  "6": 6,
+  "5": 5,
+  "4": 4,
+  "3": 3,
+  "2": 2,
+  J: 1,
+} as const;
+
 export const partB: Solver = (lines: string[]) => {
-  return 0;
+  const hands = lines
+    .map((l) => parseHand(l, computeHandTypeB))
+    .sort((a, b) => compareHands(a, b, CARD_STRENGTH_B))
+    .map((hand, idx, self) => ({ ...hand, rank: self.length - idx }));
+
+  return hands.map((hand) => hand.bid * hand.rank).reduce((a, b) => a + b);
 };
