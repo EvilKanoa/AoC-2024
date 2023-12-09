@@ -1,4 +1,4 @@
-import { Solver } from "shared";
+import { Solver, sum } from "shared";
 
 // \--- Day 9: Mirage Maintenance ---
 // ----------------------------------
@@ -121,7 +121,7 @@ export const partA: Solver = (lines: string[]) => {
   const values = lines.map(parseLine).map(withDifferences);
   const predictions = values.map(predict);
 
-  return predictions.reduce((a, b) => a + b);
+  return predictions.reduce(sum);
 };
 
 const predictBackwards = (valueDiffs: number[][]): number => {
@@ -139,5 +139,5 @@ export const partB: Solver = (lines: string[]) => {
   const values = lines.map(parseLine).map(withDifferences);
   const predictions = values.map(predictBackwards);
 
-  return predictions.reduce((a, b) => a + b);
+  return predictions.reduce(sum);
 };
