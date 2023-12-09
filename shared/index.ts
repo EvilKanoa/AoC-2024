@@ -1,7 +1,8 @@
 import { file } from "bun";
 
 export * from "./sparse-grid";
-export * from './key-by';
+export * from "./key-by";
+export * from "./math";
 
 export type Solver = (lines: string[]) => number;
 
