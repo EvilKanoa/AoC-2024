@@ -1,0 +1,19 @@
+{
+  "name": "10",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "solve": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "shared": "workspace:*"
+  },
+  "devDependencies": {
+    "9": "workspace:*",
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

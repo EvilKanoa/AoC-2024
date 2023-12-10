@@ -7,5 +7,9 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@types/robust-point-in-polygon": "^1.0.4",
+    "robust-point-in-polygon": "1.0.3"
   }
 }
