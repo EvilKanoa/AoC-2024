@@ -11,7 +11,7 @@ export type DefaultFn<T> = () => T;
 
 export type ValueToStringFn<T> = (value: T) => string;
 
-interface GridCell<T> {
+export interface GridCell<T> {
   value: T;
   x: number;
   y: number;
@@ -129,6 +129,32 @@ export class SparseGrid<T> {
     return cells;
   };
 
+  /** sparse */
+  columnCells = (x: number): GridCell<T>[] =>
+    [...this._map.values()].filter((cell) => cell.x === x);
+
+  /** sparse */
+  rowCells = (y: number): GridCell<T>[] =>
+    [...this._map.values()].filter((cell) => cell.y === y);
+
+  pushX = (fromX: number, amount: number): void => {
+    this.sparseCells()
+      .filter(({ x }) => (amount > 0 ? x >= fromX : x <= fromX))
+      .forEach((cell) => {
+        this.remove(cell.x, cell.y);
+        this.set(cell.x + amount, cell.y, cell.value);
+      });
+  };
+
+  pushY = (fromY: number, amount: number): void => {
+    this.sparseCells()
+      .filter(({ y }) => (amount > 0 ? y >= fromY : y <= fromY))
+      .forEach((cell) => {
+        this.remove(cell.x, cell.y);
+        this.set(cell.x, cell.y + amount, cell.value);
+      });
+  };
+
   adjacent = (
     checkX: number,
     checkY: number,
@@ -150,6 +176,18 @@ export class SparseGrid<T> {
       }
     }
     return cells;
+  };
+
+  clone = (): SparseGrid<T> => {
+    const clone = new SparseGrid(
+      this._default,
+      this._valueToString,
+      this._toStringPadding
+    );
+
+    this.sparseCells().forEach((cell) => clone.set(cell.x, cell.y, cell.value));
+
+    return clone;
   };
 
   toString = () => {
