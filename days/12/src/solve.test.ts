@@ -10,7 +10,7 @@ const exampleInput = `
 ?###???????? 3,2,1
 `;
 const expectedOutputA = 21;
-const expectedOutputB = 0;
+const expectedOutputB = 525152;
 
 describe("part A", () => {
   it("should pass", () => {

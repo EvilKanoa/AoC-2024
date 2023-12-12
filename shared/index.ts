@@ -4,6 +4,7 @@ export * from "./sparse-grid";
 export * from "./key-by";
 export * from "./math";
 export * from "./pairs";
+export * from "./default-list";
 
 export type Solver = (lines: string[]) => number;
 

@@ -1,4 +1,4 @@
-import { Solver, sum } from "shared";
+import { EMPTY_5, Solver, sum } from "shared";
 
 // \--- Day 12: Hot Springs ---
 // ----------------------------
@@ -181,6 +181,25 @@ export const partA: Solver = (lines: string[]) => {
     .reduce(sum);
 };
 
+const unfoldRow = (row: SpringRow): SpringRow => ({
+  conditions: EMPTY_5.flatMap((_, idx) => [
+    ...(idx !== 0 ? [Condition.UNKNOWN] : []),
+    ...row.conditions,
+  ]),
+  groups: EMPTY_5.flatMap(() => row.groups),
+});
+
 export const partB: Solver = (lines: string[]) => {
+  const rows = lines.map(parseRow).map(unfoldRow);
+
+  // yeah so time complexity absolutely explodes for part B, don't think it can be brute forced on CPU
+  // return rows
+  //   .map((row) =>
+  //     computeAllArrangements(row.conditions).filter((arrangement) =>
+  //       isArrangementValid(arrangement, row.groups)
+  //     )
+  //   )
+  //   .map((arrangements) => arrangements.length)
+  //   .reduce(sum);
   return 0;
 };

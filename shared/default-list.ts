@@ -1,0 +1,11 @@
+export const EMPTY_0 = [];
+export const EMPTY_1 = [undefined];
+export const EMPTY_2 = [...EMPTY_1, undefined];
+export const EMPTY_3 = [...EMPTY_2, undefined];
+export const EMPTY_4 = [...EMPTY_3, undefined];
+export const EMPTY_5 = [...EMPTY_4, undefined];
+export const EMPTY_6 = [...EMPTY_5, undefined];
+export const EMPTY_7 = [...EMPTY_6, undefined];
+export const EMPTY_8 = [...EMPTY_7, undefined];
+export const EMPTY_9 = [...EMPTY_8, undefined];
+export const EMPTY_10 = [...EMPTY_9, undefined];
