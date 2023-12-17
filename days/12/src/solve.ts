@@ -311,14 +311,18 @@ export const countFrom = memoize(
   }
 );
 
-export const partB: Solver = async (lines: string[]) => {
+export const partB = async (lines: string[], useCache = true) => {
   const memoCache = new SharedCache<number>();
   const cache = new ProgressCache<string, SpringRow, number>(
     "cache.json",
     true,
     false
   );
-  await cache.readCache(true);
+
+  if (useCache) {
+    await cache.readCache(true);
+  }
+
   cache.addMany(
     lines
       .map(parseRow)
