@@ -240,4 +240,4 @@ dist
 config.json
 **/input.txt
 
-days/12/cache.json
+**/days/12/cache.json

@@ -315,7 +315,7 @@ export const partB = async (lines: string[], useCache = true) => {
   const memoCache = new SharedCache<number>();
   const cache = new ProgressCache<string, SpringRow, number>(
     "cache.json",
-    true,
+    useCache,
     false
   );
 
@@ -367,7 +367,10 @@ export const partB = async (lines: string[], useCache = true) => {
     // async sleep eh
     await sleep(100);
   }
-  await cache.flush();
+
+  if (useCache) {
+    await cache.flush();
+  }
 
   return cache.completeResults.reduce(sum);
 
