@@ -1,5 +1,5 @@
 import { sleep } from "bun";
-import { EMPTY_10, EMPTY_32, EMPTY_5, ProgressCache, Solver, sum } from "shared";
+import { EMPTY_32, EMPTY_5, ProgressCache, Solver, sum } from "shared";
 
 // \--- Day 12: Hot Springs ---
 // ----------------------------
@@ -206,8 +206,11 @@ const unfoldRow = (row: SpringRow): SpringRow => {
     groups: EMPTY_5.flatMap(() => row.groups),
   };
 
-  return { ...unfolded, key: `${unfolded.conditions.join("")} ${unfolded.groups.join(",")}` };
-}
+  return {
+    ...unfolded,
+    key: `${unfolded.conditions.join("")} ${unfolded.groups.join(",")}`,
+  };
+};
 
 export const countValidArrangements = (row: SpringRow): number => {
   const countFrom = (part: Condition[]): number => {
@@ -252,9 +255,18 @@ export const countValidArrangements = (row: SpringRow): number => {
 };
 
 export const partB: Solver = async (lines: string[]) => {
-  const cache = new ProgressCache<string, SpringRow, number>("cache.json", true, false);
+  const cache = new ProgressCache<string, SpringRow, number>(
+    "cache.json",
+    true,
+    false
+  );
   await cache.readCache(true);
-  cache.addMany(lines.map(parseRow).map(unfoldRow).map((row) => [row.key, row]));
+  cache.addMany(
+    lines
+      .map(parseRow)
+      .map(unfoldRow)
+      .map((row) => [row.key, row])
+  );
 
   const rows = cache.incompleteValues.reverse();
   console.log(`Now processing ${rows.length} remaining input rows...`);
@@ -273,12 +285,15 @@ export const partB: Solver = async (lines: string[]) => {
       }
     };
 
-    newWorker.addEventListener("message", (event: MessageEvent<[string, number]>) => {
-      cache.setResult(event.data[0], event.data[1])
-      processing.delete(id);
-      console.log(cache.progressString);
-      postNextRow();
-    });
+    newWorker.addEventListener(
+      "message",
+      (event: MessageEvent<[string, number]>) => {
+        cache.setResult(event.data[0], event.data[1]);
+        processing.delete(id);
+        console.log(cache.progressString);
+        postNextRow();
+      }
+    );
 
     postNextRow();
   });
