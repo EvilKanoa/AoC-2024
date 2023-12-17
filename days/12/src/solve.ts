@@ -1,5 +1,5 @@
 import { sleep } from "bun";
-import { EMPTY_10, EMPTY_32, EMPTY_5, Solver, sum } from "shared";
+import { EMPTY_10, EMPTY_32, EMPTY_5, ProgressCache, Solver, sum } from "shared";
 
 // \--- Day 12: Hot Springs ---
 // ----------------------------
@@ -87,6 +87,7 @@ export enum Condition {
 }
 
 export interface SpringRow {
+  key: string;
   conditions: Condition[];
   groups: number[];
 }
@@ -99,6 +100,7 @@ const isCondition = (c: string): c is Condition =>
 const parseRow = (line: string): SpringRow => {
   const [conditionStr, groupStr] = line.split(" ");
   return {
+    key: `${conditionStr} ${groupStr}`,
     conditions: [...conditionStr].filter(isCondition),
     groups: groupStr
       .split(",")
@@ -195,13 +197,17 @@ export const partA: Solver = (lines: string[]) => {
   //   .reduce(sum);
 };
 
-const unfoldRow = (row: SpringRow): SpringRow => ({
-  conditions: EMPTY_5.flatMap((_, idx) => [
-    ...(idx !== 0 ? [Condition.UNKNOWN] : []),
-    ...row.conditions,
-  ]),
-  groups: EMPTY_5.flatMap(() => row.groups),
-});
+const unfoldRow = (row: SpringRow): SpringRow => {
+  const unfolded = {
+    conditions: EMPTY_5.flatMap((_, idx) => [
+      ...(idx !== 0 ? [Condition.UNKNOWN] : []),
+      ...row.conditions,
+    ]),
+    groups: EMPTY_5.flatMap(() => row.groups),
+  };
+
+  return { ...unfolded, key: `${unfolded.conditions.join("")} ${unfolded.groups.join(",")}` };
+}
 
 export const countValidArrangements = (row: SpringRow): number => {
   const countFrom = (part: Condition[]): number => {
@@ -246,8 +252,12 @@ export const countValidArrangements = (row: SpringRow): number => {
 };
 
 export const partB: Solver = async (lines: string[]) => {
-  const rows = lines.map(parseRow).map(unfoldRow);
-  let result = 0;
+  const cache = new ProgressCache<string, SpringRow, number>("cache.json", true, false);
+  await cache.readCache(true);
+  cache.addMany(lines.map(parseRow).map(unfoldRow).map((row) => [row.key, row]));
+
+  const rows = cache.incompleteValues.reverse();
+  console.log(`Now processing ${rows.length} remaining input rows...`);
 
   // tracks which workers by ID are currently processing
   const processing = new Set<number>();
@@ -263,9 +273,10 @@ export const partB: Solver = async (lines: string[]) => {
       }
     };
 
-    newWorker.addEventListener("message", (event: MessageEvent<number>) => {
-      result += event.data;
+    newWorker.addEventListener("message", (event: MessageEvent<[string, number]>) => {
+      cache.setResult(event.data[0], event.data[1])
       processing.delete(id);
+      console.log(cache.progressString);
       postNextRow();
     });
 
@@ -277,8 +288,9 @@ export const partB: Solver = async (lines: string[]) => {
     // async sleep eh
     await sleep(100);
   }
+  await cache.flush();
 
-  return result;
+  return cache.completeResults.reduce(sum);
 
   // yeah so time complexity absolutely explodes for part B, don't think it can be brute forced on CPU
   // return rows
