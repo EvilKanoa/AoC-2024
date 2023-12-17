@@ -6,7 +6,7 @@ export * from "./math";
 export * from "./pairs";
 export * from "./default-list";
 
-export type Solver = (lines: string[]) => number;
+export type Solver = (lines: string[]) => Promise<number> | number;
 
 const parseFile = async (path: string) => {
   return (await file(path).text()).trim().split("\n");
@@ -16,9 +16,9 @@ const printSolution = (part: string, solution: number, time: number) => {
   console.log(`part ${part}: ${solution} (${time.toPrecision(4)}ms)`);
 };
 
-const measureSolver = (lines: string[], solver: Solver) => {
+const measureSolver = async (lines: string[], solver: Solver) => {
   const start = performance.now();
-  const res = solver(lines);
+  const res = await solver(lines);
   const end = performance.now();
 
   return {
@@ -30,9 +30,9 @@ const measureSolver = (lines: string[], solver: Solver) => {
 export const runSolvers = async (partA: Solver, partB: Solver) => {
   const lines = await parseFile("./input.txt");
 
-  const resA = measureSolver(lines, partA);
+  const resA = await measureSolver(lines, partA);
   printSolution("A", resA.solution, resA.time);
 
-  const resB = measureSolver(lines, partB);
+  const resB = await measureSolver(lines, partB);
   printSolution("B", resB.solution, resB.time);
 };

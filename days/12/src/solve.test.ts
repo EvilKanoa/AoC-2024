@@ -19,7 +19,9 @@ describe("part A", () => {
 });
 
 describe("part B", () => {
-  it("should pass", () => {
-    expect(partB(exampleInput.trim().split("\n"))).toEqual(expectedOutputB);
+  it("should pass", async () => {
+    expect(await partB(exampleInput.trim().split("\n"))).toEqual(
+      expectedOutputB
+    );
   });
 });

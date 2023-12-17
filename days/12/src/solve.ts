@@ -1,4 +1,5 @@
-import { EMPTY_5, Solver, sum } from "shared";
+import { sleep } from "bun";
+import { EMPTY_10, EMPTY_32, EMPTY_5, Solver, sum } from "shared";
 
 // \--- Day 12: Hot Springs ---
 // ----------------------------
@@ -79,13 +80,13 @@ import { EMPTY_5, Solver, sum } from "shared";
 //
 // For each row, count all of the different arrangements of operational and broken springs that meet the given criteria. _What is the sum of those counts?_
 
-enum Condition {
+export enum Condition {
   OPERATIONAL = ".",
   DAMAGED = "#",
   UNKNOWN = "?",
 }
 
-interface SpringRow {
+export interface SpringRow {
   conditions: Condition[];
   groups: number[];
 }
@@ -106,10 +107,10 @@ const parseRow = (line: string): SpringRow => {
   };
 };
 
-const isArrangementValid = (
-  arrangement: Condition[],
-  groups: number[]
-): boolean => {
+const rowToString = (row: SpringRow) =>
+  `${row.conditions.join("")} ${row.groups.join(",")}`;
+
+const getArrangementValidity = (arrangement: Condition[], groups: number[]) => {
   const remainingGroups = [...groups];
   let currentGroup: null | number = null;
 
@@ -143,8 +144,19 @@ const isArrangementValid = (
     }
   }
 
+  return { remainingGroups, currentGroup };
+};
+
+const isArrangementValid = (
+  arrangement: Condition[],
+  groups: number[]
+): boolean => {
+  const validity = getArrangementValidity(arrangement, groups);
+
   return (
-    remainingGroups.length === 0 && (currentGroup == null || currentGroup === 0)
+    validity &&
+    validity.remainingGroups.length === 0 &&
+    (validity.currentGroup == null || validity.currentGroup === 0)
   );
 };
 
@@ -171,14 +183,16 @@ const computeAllArrangements = (conditions: Condition[]): Condition[][] => {
 export const partA: Solver = (lines: string[]) => {
   const rows = lines.map(parseRow);
 
-  return rows
-    .map((row) =>
-      computeAllArrangements(row.conditions).filter((arrangement) =>
-        isArrangementValid(arrangement, row.groups)
-      )
-    )
-    .map((arrangements) => arrangements.length)
-    .reduce(sum);
+  // using improvements for part B greatly speeds up part A as well
+  return rows.map((row) => countValidArrangements(row)).reduce(sum);
+  // return rows
+  //   .map((row) =>
+  //     computeAllArrangements(row.conditions).filter((arrangement) =>
+  //       isArrangementValid(arrangement, row.groups)
+  //     )
+  //   )
+  //   .map((arrangements) => arrangements.length)
+  //   .reduce(sum);
 };
 
 const unfoldRow = (row: SpringRow): SpringRow => ({
@@ -189,8 +203,82 @@ const unfoldRow = (row: SpringRow): SpringRow => ({
   groups: EMPTY_5.flatMap(() => row.groups),
 });
 
-export const partB: Solver = (lines: string[]) => {
+export const countValidArrangements = (row: SpringRow): number => {
+  const countFrom = (part: Condition[]): number => {
+    // base case: part is full row length, either is or isn't valid
+    if (part.length === row.conditions.length) {
+      return isArrangementValid(part, row.groups) ? 1 : 0;
+    }
+
+    // 1:1 case: known entry, move to next
+    if (row.conditions[part.length] !== Condition.UNKNOWN) {
+      return countFrom([...part, row.conditions[part.length]]);
+    }
+
+    // otherwise, check current validity
+    const validity = getArrangementValidity(part, row.groups);
+
+    // if current is already invalid, no possible valid arrangements
+    if (!validity) {
+      return 0;
+    }
+
+    const canNextBeDamaged =
+      (validity.remainingGroups.length > 0 && validity.currentGroup === null) ||
+      (validity.currentGroup ?? 0) > 0;
+    const canNextBeOperational = (validity.currentGroup ?? 0) === 0;
+
+    const ifDamagedCount = canNextBeDamaged
+      ? countFrom([...part, Condition.DAMAGED])
+      : 0;
+    const ifOperationalCount = canNextBeOperational
+      ? countFrom([...part, Condition.OPERATIONAL])
+      : 0;
+
+    return ifDamagedCount + ifOperationalCount;
+  };
+
+  const validArrangements = countFrom([]);
+  console.log(
+    `Found ${validArrangements} valid arrangement(s) for ${rowToString(row)}`
+  );
+  return validArrangements;
+};
+
+export const partB: Solver = async (lines: string[]) => {
   const rows = lines.map(parseRow).map(unfoldRow);
+  let result = 0;
+
+  // tracks which workers by ID are currently processing
+  const processing = new Set<number>();
+  EMPTY_32.forEach((_, id) => {
+    const newWorker = new Worker(new URL("worker.ts", import.meta.url).href);
+
+    const postNextRow = () => {
+      if (rows.length) {
+        processing.add(id);
+        newWorker.postMessage(rows.shift()!);
+      } else {
+        newWorker.terminate();
+      }
+    };
+
+    newWorker.addEventListener("message", (event: MessageEvent<number>) => {
+      result += event.data;
+      processing.delete(id);
+      postNextRow();
+    });
+
+    postNextRow();
+  });
+
+  // so uh, let's see if this can brute force it lmao
+  while (rows.length > 0 || processing.size > 0) {
+    // async sleep eh
+    await sleep(100);
+  }
+
+  return result;
 
   // yeah so time complexity absolutely explodes for part B, don't think it can be brute forced on CPU
   // return rows
@@ -201,5 +289,7 @@ export const partB: Solver = (lines: string[]) => {
   //   )
   //   .map((arrangements) => arrangements.length)
   //   .reduce(sum);
-  return 0;
+
+  // this approach was making progress, albeit very, very slow progress
+  // return rows.map((row) => countValidArrangements(row)).reduce(sum);
 };

@@ -8,13 +8,17 @@ const expectedOutputA = 0;
 const expectedOutputB = 0;
 
 describe("part A", () => {
-  it("should pass", () => {
-    expect(partA(exampleInput.trim().split("\n"))).toEqual(expectedOutputA);
+  it("should pass", async () => {
+    expect(await partA(exampleInput.trim().split("\n"))).toEqual(
+      expectedOutputA
+    );
   });
 });
 
 describe("part B", () => {
-  it("should pass", () => {
-    expect(partB(exampleInput.trim().split("\n"))).toEqual(expectedOutputB);
+  it("should pass", async () => {
+    expect(await partB(exampleInput.trim().split("\n"))).toEqual(
+      expectedOutputB
+    );
   });
 });
