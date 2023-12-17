@@ -1,5 +1,13 @@
 import { sleep } from "bun";
-import { EMPTY_32, EMPTY_5, ProgressCache, Solver, sum } from "shared";
+import {
+  EMPTY_32,
+  EMPTY_5,
+  ProgressCache,
+  SharedCache,
+  Solver,
+  memoize,
+  sum,
+} from "shared";
 
 // \--- Day 12: Hot Springs ---
 // ----------------------------
@@ -186,7 +194,7 @@ export const partA: Solver = (lines: string[]) => {
   const rows = lines.map(parseRow);
 
   // using improvements for part B greatly speeds up part A as well
-  return rows.map((row) => countValidArrangements(row)).reduce(sum);
+  return rows.map((row) => countFrom(row.conditions, row.groups)).reduce(sum);
   // return rows
   //   .map((row) =>
   //     computeAllArrangements(row.conditions).filter((arrangement) =>
@@ -212,49 +220,99 @@ const unfoldRow = (row: SpringRow): SpringRow => {
   };
 };
 
-export const countValidArrangements = (row: SpringRow): number => {
-  const countFrom = (part: Condition[]): number => {
-    // base case: part is full row length, either is or isn't valid
-    if (part.length === row.conditions.length) {
-      return isArrangementValid(part, row.groups) ? 1 : 0;
+// export const countValidArrangements = (row: SpringRow): number => {
+//   const countFrom = (part: Condition[]): number => {
+//     // base case: part is full row length, either is or isn't valid
+//     if (part.length === row.conditions.length) {
+//       return isArrangementValid(part, row.groups) ? 1 : 0;
+//     }
+
+//     // 1:1 case: known entry, move to next
+//     if (row.conditions[part.length] !== Condition.UNKNOWN) {
+//       return countFrom([...part, row.conditions[part.length]]);
+//     }
+
+//     // otherwise, check current validity
+//     const validity = getArrangementValidity(part, row.groups);
+
+//     // if current is already invalid, no possible valid arrangements
+//     if (!validity) {
+//       return 0;
+//     }
+
+//     const canNextBeDamaged =
+//       (validity.remainingGroups.length > 0 && validity.currentGroup === null) ||
+//       (validity.currentGroup ?? 0) > 0;
+//     const canNextBeOperational = (validity.currentGroup ?? 0) === 0;
+
+//     const ifDamagedCount = canNextBeDamaged
+//       ? countFrom([...part, Condition.DAMAGED])
+//       : 0;
+//     const ifOperationalCount = canNextBeOperational
+//       ? countFrom([...part, Condition.OPERATIONAL])
+//       : 0;
+
+//     return ifDamagedCount + ifOperationalCount;
+//   };
+
+//   const validArrangements = countFrom([]);
+//   console.log(
+//     `Found ${validArrangements} valid arrangement(s) for ${rowToString(row)}`
+//   );
+//   return validArrangements;
+// };
+
+export const countFrom = memoize(
+  (from: Condition[], groups: number[]): number => {
+    // end of line, valid if all groups are accounted for
+    if (from.length === 0) {
+      return groups.length === 0 ? 1 : 0;
     }
 
-    // 1:1 case: known entry, move to next
-    if (row.conditions[part.length] !== Condition.UNKNOWN) {
-      return countFrom([...part, row.conditions[part.length]]);
+    // end of all groups, valid if no broken conditions remain
+    if (groups.length === 0) {
+      return from.some((c) => c === Condition.DAMAGED) ? 0 : 1;
     }
 
-    // otherwise, check current validity
-    const validity = getArrangementValidity(part, row.groups);
-
-    // if current is already invalid, no possible valid arrangements
-    if (!validity) {
+    // optimization: exit early if from not long enough for remaining groups
+    if (from.length < groups.reduce(sum) + groups.length - 1) {
       return 0;
     }
 
-    const canNextBeDamaged =
-      (validity.remainingGroups.length > 0 && validity.currentGroup === null) ||
-      (validity.currentGroup ?? 0) > 0;
-    const canNextBeOperational = (validity.currentGroup ?? 0) === 0;
+    switch (from[0]) {
+      // if operational, move forward one
+      case Condition.OPERATIONAL:
+        return countFrom(from.slice(1), groups);
 
-    const ifDamagedCount = canNextBeDamaged
-      ? countFrom([...part, Condition.DAMAGED])
-      : 0;
-    const ifOperationalCount = canNextBeOperational
-      ? countFrom([...part, Condition.OPERATIONAL])
-      : 0;
+      // if damaged, consume and validate next group then move forward one
+      case Condition.DAMAGED:
+        const [currentGroup, ...remainingGroups] = groups;
+        for (let i = 0; i < currentGroup; i++) {
+          // if in a group, must be damaged or unknown
+          if (from[i] === Condition.OPERATIONAL) {
+            return 0;
+          }
+        }
 
-    return ifDamagedCount + ifOperationalCount;
-  };
+        // ensure there's a break after group
+        if (from[currentGroup] === Condition.DAMAGED) {
+          return 0;
+        }
 
-  const validArrangements = countFrom([]);
-  console.log(
-    `Found ${validArrangements} valid arrangement(s) for ${rowToString(row)}`
-  );
-  return validArrangements;
-};
+        return countFrom(from.slice(currentGroup + 1), remainingGroups);
+
+      // if unknown, branch and check both options
+      case Condition.UNKNOWN:
+        return (
+          countFrom([Condition.DAMAGED, ...from.slice(1)], groups) +
+          countFrom([Condition.OPERATIONAL, ...from.slice(1)], groups)
+        );
+    }
+  }
+);
 
 export const partB: Solver = async (lines: string[]) => {
+  const memoCache = new SharedCache<number>();
   const cache = new ProgressCache<string, SpringRow, number>(
     "cache.json",
     true,
@@ -268,7 +326,7 @@ export const partB: Solver = async (lines: string[]) => {
       .map((row) => [row.key, row])
   );
 
-  const rows = cache.incompleteValues.reverse();
+  const rows = cache.incompleteValues;
   console.log(`Now processing ${rows.length} remaining input rows...`);
 
   // tracks which workers by ID are currently processing
@@ -279,7 +337,7 @@ export const partB: Solver = async (lines: string[]) => {
     const postNextRow = () => {
       if (rows.length) {
         processing.add(id);
-        newWorker.postMessage(rows.shift()!);
+        newWorker.postMessage([rows.shift()!, memoCache.shared]);
       } else {
         newWorker.terminate();
       }
@@ -287,10 +345,12 @@ export const partB: Solver = async (lines: string[]) => {
 
     newWorker.addEventListener(
       "message",
-      (event: MessageEvent<[string, number]>) => {
+      (event: MessageEvent<[string, number, Map<string, number>]>) => {
         cache.setResult(event.data[0], event.data[1]);
         processing.delete(id);
+        memoCache.updateFrom(event.data[2]);
         console.log(cache.progressString);
+        console.log(`Shared cache size: ${memoCache.shared.size}`);
         postNextRow();
       }
     );
