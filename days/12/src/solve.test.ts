@@ -20,7 +20,7 @@ describe("part A", () => {
 
 describe("part B", () => {
   it("should pass", async () => {
-    expect(await partB(exampleInput.trim().split("\n"), false)).toEqual(
+    expect(await partB(exampleInput.trim().split("\n"))).toEqual(
       expectedOutputB
     );
   });
