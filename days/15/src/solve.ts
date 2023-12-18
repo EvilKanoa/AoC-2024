@@ -1,4 +1,4 @@
-import { Solver, sum } from "shared";
+import { EMPTY_256, Solver, Tuple256, sum } from "shared";
 
 // \--- Day 15: Lens Library ---
 // -----------------------------
@@ -88,6 +88,65 @@ const hash = (str: string): number => {
 export const partA: Solver = (lines: string[]) =>
   parseInput(lines).map(hash).reduce(sum);
 
+enum Operation {
+  REMOVE = "-",
+  ADD = "=",
+}
+
+type Step = {
+  label: string;
+  box: number;
+} & (
+  | {
+      op: Operation.REMOVE;
+    }
+  | {
+      op: Operation.ADD;
+      focal: number;
+    }
+);
+
+const parseStep = (stepStr: string): Step => {
+  const match = stepStr.match(/^([a-z]+)(-|=)([0-9]*)$/)!;
+  const [_, label, op, focalStr] = match;
+  const box = hash(label);
+
+  if (op === Operation.ADD) {
+    return { label, op, box, focal: parseInt(focalStr, 10) };
+  } else if (op === Operation.REMOVE) {
+    return { label, op, box };
+  }
+
+  throw new Error("Unknown operation!");
+};
+
+interface Lens {
+  label: string;
+  focal: number;
+}
+
 export const partB: Solver = (lines: string[]) => {
-  return 0;
+  const steps = parseInput(lines).map(parseStep);
+  const boxes = EMPTY_256.map(() => [] as Lens[]) as Tuple256<Lens[]>;
+
+  // simulate
+  for (const step of steps) {
+    if (step.op === Operation.REMOVE) {
+      boxes[step.box] = boxes[step.box].filter((l) => l.label !== step.label);
+    } else {
+      const existing = boxes[step.box].findIndex((l) => l.label === step.label);
+      if (existing !== -1) {
+        boxes[step.box][existing].focal = step.focal;
+      } else {
+        boxes[step.box].push({ ...step });
+      }
+    }
+  }
+
+  // calculate focusing power
+  return boxes
+    .flatMap((lenses, box) =>
+      lenses.map((lens, slot) => (box + 1) * (slot + 1) * lens.focal)
+    )
+    .reduce(sum);
 };

@@ -8,6 +8,7 @@ export * from "./default-list";
 export * from "./progress-cache";
 export * from "./memo";
 export * from "./split";
+export * from "./tuple";
 
 export type Solver = (lines: string[]) => Promise<number> | number;
 
