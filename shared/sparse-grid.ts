@@ -214,4 +214,35 @@ export class SparseGrid<T> {
 
     return str;
   };
+
+  equals = (other: SparseGrid<T>, ignoreDifferingDefaults = false): boolean => {
+    // unless ignoring, default values need to equal
+    if (!ignoreDifferingDefaults && this._default() !== other._default()) {
+      return false;
+    }
+
+    // must have equal extents to be equal
+    const extentsA = this.extents();
+    const extentsB = other.extents();
+    if (
+      extentsA[0][0] !== extentsB[0][0] ||
+      extentsA[0][1] !== extentsB[0][1] ||
+      extentsA[1][0] !== extentsB[1][0] ||
+      extentsA[1][1] !== extentsB[1][1]
+    ) {
+      return false;
+    }
+
+    const otherMap = new Map(other._map);
+    for (const aCell of this.sparseCells()) {
+      const key = k(aCell.x, aCell.y);
+      if (!otherMap.has(key) || otherMap.get(key)!.value !== aCell.value) {
+        return false;
+      }
+
+      otherMap.delete(key);
+    }
+
+    return otherMap.size === 0;
+  };
 }
