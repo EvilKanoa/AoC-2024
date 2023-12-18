@@ -2,6 +2,7 @@ import { sleep } from "bun";
 import {
   EMPTY_32,
   EMPTY_5,
+  MEMO_KEY_STATS,
   ProgressCache,
   SharedCache,
   Solver,
@@ -311,7 +312,17 @@ export const countFrom = memoize(
   }
 );
 
-export const partB = async (lines: string[], useCache = true) => {
+export const partB: Solver = (lines: string[]): number =>
+  lines
+    .map(parseRow)
+    .map(unfoldRow)
+    .map((row) => countFrom(row.conditions, row.groups))
+    .reduce(sum);
+
+// turns out I didn't check my memo cache correctly, so the above is all that's
+// needed now. But I got through 95% of the rows with the below insane bruteforce
+// before the memoize util worked LOL
+export const partBWTF = async (lines: string[], useCache = true) => {
   const memoCache = new SharedCache<number>();
   const cache = new ProgressCache<string, SpringRow, number>(
     "cache.json",

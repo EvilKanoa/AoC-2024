@@ -46,7 +46,7 @@ export const memoize = <Arguments extends unknown[], Result>(
     captureStats
       ? (...args: Arguments) => {
           const key = JSON.stringify(args);
-          if (key in cache) {
+          if (cache.has(key)) {
             stats.hits++;
             return cache.get(key)!;
           }
@@ -57,7 +57,7 @@ export const memoize = <Arguments extends unknown[], Result>(
         }
       : (...args: Arguments) => {
           const key = JSON.stringify(args);
-          if (key in cache) {
+          if (cache.has(key)) {
             return cache.get(key)!;
           }
           const result = func(...args);
