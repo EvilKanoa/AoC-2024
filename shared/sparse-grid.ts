@@ -69,6 +69,9 @@ export class SparseGrid<T> {
     return value;
   };
 
+  /**
+   * Extends given in [[xMin, xMax], [yMin, yMax]]
+   */
   extents = (padding = 0): [[number, number], [number, number]] => {
     const extents = [
       [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER],
