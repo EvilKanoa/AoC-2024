@@ -210,40 +210,32 @@ const findCycle = (
 ): { start: number; length: number } => {
   const platformAtCycle = [platform.clone()];
 
-  for (let cycle = 0; cycle < 1_000_000_000; cycle++) {
+  let cycle = 1;
+  while (true) {
     spin(platform);
 
     // check if we have a matching prior state
     const start = platformAtCycle.findIndex((p) => p.equals(platform));
     if (start !== -1) {
-      console.log(start, cycle - start);
       return { start, length: cycle - start };
     }
 
     platformAtCycle.push(platform.clone());
+    cycle++;
   }
-
-  throw new Error("No cycle found!");
 };
 
 export const partA: Solver = (lines: string[]) =>
   getLoadNorth(tiltNorth(parseInput(lines)));
 
+const NUM_CYCLES = 1_000_000_000;
 export const partB: Solver = (lines: string[]) => {
   const platform = parseInput(lines);
   const cycleData = findCycle(platform);
-  console.log(
-    `Cycle starts at ${cycleData.start} with a length of ${cycleData.length}!`
-  );
-  let cycle = cycleData.start;
 
-  while (cycle < 1_000_000_000 - cycleData.length) {
-    cycle += cycleData.length;
-  }
-
-  while (cycle <= 1_000_000_000) {
+  let cycles = (NUM_CYCLES - cycleData.start) % cycleData.length;
+  while (cycles--) {
     spin(platform);
-    cycle++;
   }
 
   return getLoadNorth(platform);
