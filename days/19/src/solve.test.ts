@@ -21,7 +21,7 @@ hdj{m>838:A,pv}
 {x=2127,m=1623,a=2188,s=1013}
 `;
 const expectedOutputA = 19114;
-const expectedOutputB = 0;
+const expectedOutputB = 167409079868000;
 
 describe("part A", () => {
   it("should pass", async () => {

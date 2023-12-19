@@ -1,4 +1,4 @@
-import { Solver } from "shared";
+import { Solver, keyBy, split, sum } from "shared";
 
 // \--- Day 19: Aplenty ---
 // ------------------------
@@ -58,10 +58,143 @@ import { Solver } from "shared";
 //
 // Sort through all of the parts you've been given; _what do you get if you add together all of the rating numbers for all of the parts that ultimately get accepted?_
 
+interface Part {
+  x: number;
+  m: number;
+  a: number;
+  s: number;
+}
+
+enum PartResult {
+  ACCEPTED = "A",
+  REJECTED = "R",
+}
+enum WorkflowConditionType {
+  GREATER_THAN = ">",
+  LESS_THAN = "<",
+}
+type WorkflowKey = string;
+type WorkflowResult = PartResult | WorkflowKey;
+
+interface WorkflowRule {
+  condition:
+    | { default: true }
+    | {
+        type: WorkflowConditionType;
+        category: keyof Part;
+        threshold: number;
+      };
+  result: WorkflowResult;
+}
+
+interface Workflow {
+  key: WorkflowKey;
+  rules: WorkflowRule[];
+}
+
+const parseWorkflow = (line: string): Workflow => {
+  const [key, ruleStrings] = line.split("{");
+
+  const rules: WorkflowRule[] = [];
+  for (const ruleStr of ruleStrings.replace("}", "").split(",")) {
+    if (ruleStr.includes(":")) {
+      // conditional rule
+      const type = ruleStr.includes(">")
+        ? WorkflowConditionType.GREATER_THAN
+        : WorkflowConditionType.LESS_THAN;
+
+      const [category, threshold, result] = ruleStr.split(/[<>:]/g);
+
+      rules.push({
+        condition: {
+          type,
+          category: category as keyof Part,
+          threshold: parseInt(threshold, 10),
+        },
+        result,
+      });
+    } else {
+      // default rule
+      rules.push({ condition: { default: true }, result: ruleStr });
+    }
+  }
+
+  return { key, rules };
+};
+
+const parsePart = (line: string): Part => {
+  const part = { x: 0, m: 0, a: 0, s: 0 };
+
+  for (const cat of line.replace(/[{}]/g, "").split(",")) {
+    const [catKey, valueStr] = cat.split("=");
+    part[catKey as keyof Part] += parseInt(valueStr, 10);
+  }
+
+  return part;
+};
+
+const parseInput = (
+  lines: string[]
+): { workflows: Record<WorkflowKey, Workflow>; parts: Part[] } => {
+  const [workflowLines, partLines] = split(lines, (line) => line.length === 0);
+
+  return {
+    workflows: keyBy(workflowLines.map(parseWorkflow), "key"),
+    parts: partLines.map(parsePart),
+  };
+};
+
+const processPart = (
+  workflows: Record<WorkflowKey, Workflow>,
+  part: Part,
+  startingWorkflow: WorkflowKey = "in"
+): boolean => {
+  let current = startingWorkflow;
+  while (current !== PartResult.ACCEPTED && current !== PartResult.REJECTED) {
+    for (const { condition, result } of workflows[current].rules) {
+      if (
+        "default" in condition ||
+        (condition.type === WorkflowConditionType.GREATER_THAN &&
+          part[condition.category] > condition.threshold) ||
+        (condition.type === WorkflowConditionType.LESS_THAN &&
+          part[condition.category] < condition.threshold)
+      ) {
+        current = result;
+        break;
+      }
+    }
+  }
+
+  return current === PartResult.ACCEPTED;
+};
+
 export const partA: Solver = (lines: string[]) => {
-  return 0;
+  const { workflows, parts } = parseInput(lines);
+
+  return parts
+    .filter((part) => processPart(workflows, part))
+    .map(({ x, m, a, s }) => x + m + a + s)
+    .reduce(sum);
 };
 
 export const partB: Solver = (lines: string[]) => {
-  return 0;
+  const { workflows } = parseInput(lines);
+
+  let accepted = 0;
+
+  // not bruteforce realm, very slight maybe with multithreading, could consider on GPU
+  // for (let x = 1; x <= 4000; x++) {
+  //   for (let m = 1; m <= 4000; m++) {
+  //     console.log(`x = ${x}, m = ${m}, accepted = ${accepted}`);
+  //     for (let a = 1; a <= 4000; a++) {
+  //       for (let s = 1; s <= 4000; s++) {
+  //         if (processPart(workflows, { x, m, a, s })) {
+  //           accepted++;
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+  return accepted;
 };
