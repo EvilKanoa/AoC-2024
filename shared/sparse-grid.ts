@@ -145,6 +145,8 @@ export class SparseGrid<T> {
     return extents;
   };
 
+  size = () => this._map.size;
+
   eachSparse = (cb: (x: number, y: number, value: T) => void) => {
     for (let [_, { value, x, y }] of this._map) {
       cb(x, y, value);
@@ -233,6 +235,28 @@ export class SparseGrid<T> {
       }
     }
     return cells;
+  };
+
+  popBy = (valueFn: (item: T) => number): GridCell<T> => {
+    if (this.size() === 0) {
+      throw new Error("Cannot pop from empty grid!");
+    }
+
+    const cell = this.sparseCells().reduce<[GridCell<T> | undefined, number]>(
+      (acc, cell) => {
+        const cellValue = valueFn(cell.value);
+        if (cellValue >= acc[1]) {
+          return [cell, cellValue];
+        }
+
+        return acc;
+      },
+      [undefined, Number.MIN_SAFE_INTEGER]
+    )[0]!;
+
+    this.remove(cell.x, cell.y);
+
+    return cell;
   };
 
   clone = (): SparseGrid<T> => {
