@@ -10,6 +10,7 @@ export * from "./memo";
 export * from "./split";
 export * from "./tuple";
 export * from "./identity";
+export * from "./range";
 
 export type Solver = (lines: string[]) => Promise<number> | number;
 
