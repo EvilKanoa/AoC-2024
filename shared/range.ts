@@ -3,7 +3,7 @@ export class Range {
   private readonly _end: number;
   private readonly _empty: boolean;
 
-  private constructor(start: number, end: number) {
+  constructor(start: number, end: number) {
     const empty = end < start;
     this._start = empty ? 0 : start;
     this._end = empty ? -1 : end;
@@ -34,7 +34,14 @@ export class Range {
     return this._end;
   }
 
+  get length() {
+    return this.end - this.start + 1;
+  }
+
   copy = (): Range => new Range(this.start, this.end);
+
+  includes = (target: number) =>
+    !this.empty && this.start <= target && target <= this.end;
 
   intersect = (other: Range): Range => {
     if (
@@ -83,4 +90,28 @@ export class Range {
       new Range(intersection.end + 1, this.end),
     ].filter((r) => !r.empty);
   };
+
+  /**
+   * Slices this range at the given `point` resulting in two ranges, the left
+   * and the right range. Up to one of which may be empty (both if the range
+   * being acted upon is empty). The left range contains the original range for
+   * all values less than point and the right range contains the original range
+   * for all values more than or equal to point. This means that the right
+   * range will contain point if it overlaps what-so-ever.
+   *
+   * For example, if your range is 5 to 10 (inclusive), the following values for
+   * point produce the shown results:
+   * - `point = 4`: `[EMPTY, 5 to 10]`
+   * - `point = 5`: `[EMPTY, 5 to 10]`
+   * - `point = 6`: `[5 to 5, 6 to 10]`
+   * - `point = 7`: `[5 to 6, 7 to 10]`
+   * - `point = 8`: `[5 to 6, 8 to 10]`
+   * - `point = 9`: `[5 to 8, 9 to 10]`
+   * - `point = 10`: `[5 to 9, 10 to 10]`
+   * - `point = 11`: `[5 to 10, EMPTY]`
+   */
+  slice = (point: number): [Range, Range] => [
+    new Range(this.start, point - 1),
+    new Range(point, this.end),
+  ];
 }

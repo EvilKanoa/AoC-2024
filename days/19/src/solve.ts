@@ -1,4 +1,4 @@
-import { Solver, keyBy, split, sum } from "shared";
+import { Range, Solver, keyBy, split, sum } from "shared";
 
 // \--- Day 19: Aplenty ---
 // ------------------------
@@ -146,10 +146,9 @@ const parseInput = (
 
 const processPart = (
   workflows: Record<WorkflowKey, Workflow>,
-  part: Part,
-  startingWorkflow: WorkflowKey = "in"
+  part: Part
 ): boolean => {
-  let current = startingWorkflow;
+  let current = "in";
   while (current !== PartResult.ACCEPTED && current !== PartResult.REJECTED) {
     for (const { condition, result } of workflows[current].rules) {
       if (
@@ -177,24 +176,80 @@ export const partA: Solver = (lines: string[]) => {
     .reduce(sum);
 };
 
+interface PartRange {
+  x: Range;
+  m: Range;
+  a: Range;
+  s: Range;
+}
+
+const ratingRange = () => new Range(1, 4000);
+
 export const partB: Solver = (lines: string[]) => {
   const { workflows } = parseInput(lines);
 
-  let accepted = 0;
+  // tracks all part ranges which have been processed into the accepted state
+  const accepted: PartRange[] = [];
+  // contains part ranges which have not completed processing yet
+  const queue: { range: PartRange; current: [WorkflowKey, number] }[] = [
+    {
+      range: {
+        x: ratingRange(),
+        m: ratingRange(),
+        a: ratingRange(),
+        s: ratingRange(),
+      },
+      current: ["in", 0],
+    },
+  ];
 
-  // not bruteforce realm, very slight maybe with multithreading, could consider on GPU
-  // for (let x = 1; x <= 4000; x++) {
-  //   for (let m = 1; m <= 4000; m++) {
-  //     console.log(`x = ${x}, m = ${m}, accepted = ${accepted}`);
-  //     for (let a = 1; a <= 4000; a++) {
-  //       for (let s = 1; s <= 4000; s++) {
-  //         if (processPart(workflows, { x, m, a, s })) {
-  //           accepted++;
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
+  // process all part ranges until rejected or accepted
+  while (queue.length) {
+    const { range, current } = queue.pop()!;
 
-  return accepted;
+    // we just yeet everything into the queue and handle results and invalid states here
+    if (current[0] === PartResult.ACCEPTED) {
+      accepted.push(range);
+      continue;
+    } else if (
+      current[0] === PartResult.REJECTED ||
+      range.x.empty ||
+      range.m.empty ||
+      range.a.empty ||
+      range.s.empty
+    ) {
+      continue;
+    }
+
+    // looks like we gotta do something, let's grab it
+    const { condition, result } = workflows[current[0]].rules[current[1]];
+
+    if ("default" in condition) {
+      // default case of workflow, simply assign result
+      queue.push({ range, current: [result, 0] });
+    } else {
+      // need to split the current range by the condition
+      const { category, type, threshold } = condition;
+      const [falseRange, trueRange] =
+        type === WorkflowConditionType.LESS_THAN
+          ? range[category].slice(threshold).reverse()
+          : range[category].slice(threshold + 1);
+
+      // since we account for empty ranges, we just yeet these into the queue
+      queue.push(
+        {
+          range: { ...range, [category]: trueRange },
+          current: [result, 0],
+        },
+        {
+          range: { ...range, [category]: falseRange },
+          current: [current[0], current[1] + 1],
+        }
+      );
+    }
+  }
+
+  return accepted
+    .map((r) => r.x.length * r.m.length * r.a.length * r.s.length)
+    .reduce(sum);
 };
