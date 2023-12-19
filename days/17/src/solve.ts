@@ -1,4 +1,11 @@
-import { GridKey, MEMO_KEY_STATS, Solver, SparseGrid, memoize } from "shared";
+import {
+  GridKey,
+  Heap,
+  MEMO_KEY_STATS,
+  Solver,
+  SparseGrid,
+  memoize,
+} from "shared";
 
 // \--- Day 17: Clumsy Crucible ---
 // --------------------------------
@@ -75,67 +82,67 @@ const parseMap = (lines: string[]) =>
     0
   );
 
-const dijkstra = (
-  map: SparseGrid<number>,
-  startX: number,
-  startY: number,
-  goalX: number,
-  goalY: number,
-  minDist: number,
-  maxDist: number
-) => {
-  const extents = map.extents();
-  const queue = new SparseGrid<[number, Direction | -1]>(() => [
-    Number.MAX_SAFE_INTEGER,
-    -1,
-  ]).set(startX, startY, [0, -1]);
-  const visited = new Set<`${GridKey},${number}`>();
-  const costs = new Map<`${GridKey},${number}`, number>();
+const dijkstra = (map: SparseGrid<number>, min: number, max: number) => {
+  const [[, goalX], [, goalY]] = map.extents();
 
-  while (queue.size()) {
-    // TODO: make a heap-based priority queue if we really need it
-    const current = queue.popBy(([d]) => -d);
+  // `x,y,direction`
+  const seen = new Set<`${number},${number},${Direction}`>();
+  // [heat, counter, x, y, direction]
+  let counter = 0;
+  const queue = new Heap<[number, number, number, number, Direction]>(
+    (a, b) => {
+      for (let i = 0; i < a.length; i++) {
+        const diff = a[i] - b[i];
+        if (diff !== 0) {
+          return diff;
+        }
+      }
+      return 0;
+    }
+  );
+  queue.init([
+    // start going right
+    [0, 0, 0, 0, 1],
+    // start going down
+    [0, 0, 0, 0, 2],
+  ]);
 
-    if (current.x === goalX && current.y === goalY) {
-      return current.value;
+  while (!queue.isEmpty()) {
+    const [heat, , x, y, direction] = queue.pop()!;
+
+    if (x === goalX && y === goalY) {
+      return heat;
     }
 
-    const visitKey = `${current.x},${current.y},${current.value[1]}` as const;
-    if (visited.has(visitKey)) {
+    const key = `${x},${y},${direction}` as const;
+    if (seen.has(key)) {
       continue;
     }
+    seen.add(key);
 
-    visited.add(visitKey);
+    for (const nextDir of [(direction + 1) % 4, (direction + 3) % 4]) {
+      let increase = 0;
+      for (let i = 1; i <= max; i++) {
+        const nextX = x + DIRECTIONS[nextDir][0] * i;
+        const nextY = y + DIRECTIONS[nextDir][1] * i;
 
-    for (let direction = 0; direction < DIRECTIONS.length; direction++) {
-      if (
-        direction !== -1 &&
-        (direction === current.value[1] ||
-          (direction + 2) % 4 === current.value[1])
-      ) {
-        continue;
-      }
-
-      let costChange = 0;
-      for (let dist = 1; dist <= maxDist; dist++) {
-        const newX = current.x + DIRECTIONS[direction][0] * dist;
-        const newY = current.y + DIRECTIONS[direction][1] * dist;
-
-        costChange += map.get(newX, newY);
-        if (dist < minDist) {
+        if (!map.has(nextX, nextY)) {
           continue;
         }
 
-        const cost = current.value[0] + costChange;
-        if (
-          (costs.get(`${newX},${newY},${direction}`) ??
-            Number.MAX_SAFE_INTEGER) <= cost
-        ) {
+        increase += map.get(nextX, nextY);
+
+        if (i < min) {
           continue;
         }
 
-        costs.set(`${newX},${newY},${direction}`, cost);
-        queue.set(newX, newY, [cost, direction as Direction]);
+        queue.push([
+          heat + increase,
+          ++counter,
+          nextX,
+          nextY,
+          nextDir as Direction,
+        ]);
       }
     }
   }
@@ -143,21 +150,8 @@ const dijkstra = (
   throw new Error("No path found!");
 };
 
-export const partA: Solver = (lines: string[]) => {
-  const map = parseMap(lines);
-  // TODO: not sure why but seemingly not getting the optimal path
-  const result = dijkstra(
-    map,
-    0,
-    0,
-    map.extents()[0][1],
-    map.extents()[1][1],
-    1,
-    3
-  );
-  return result[0];
-};
+export const partA: Solver = (lines: string[]) =>
+  dijkstra(parseMap(lines), 1, 3);
 
-export const partB: Solver = (lines: string[]) => {
-  return 0;
-};
+export const partB: Solver = (lines: string[]) =>
+  dijkstra(parseMap(lines), 4, 10);
