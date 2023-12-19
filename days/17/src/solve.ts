@@ -57,6 +57,15 @@ import { GridKey, MEMO_KEY_STATS, Solver, SparseGrid, memoize } from "shared";
 //
 // Directing the crucible from the lava pool to the machine parts factory, but not moving more than three consecutive blocks in the same direction, _what is the least heat loss it can incur?_
 
+const DIRECTIONS = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+] as const;
+
+type Direction = 0 | 1 | 2 | 3;
+
 const parseMap = (lines: string[]) =>
   SparseGrid.fromLines<number>(
     lines,
@@ -66,34 +75,22 @@ const parseMap = (lines: string[]) =>
     0
   );
 
-const positionsEqual = (a: [number, number], b: [number, number]) =>
-  a[0] === b[0] && a[1] === b[1];
-
-const isMovementAllowed = (path: [number, number][], x: number, y: number) => {
-  if (path.length < 4) {
-    return true;
-  } else if (positionsEqual(path[path.length - 2], [x, y])) {
-    return false;
-  }
-
-  const tail = path.slice(-4);
-
-  return tail.some((v) => v[0] !== x) && tail.some((v) => v[1] !== y);
-};
-
 const dijkstra = (
   map: SparseGrid<number>,
   startX: number,
   startY: number,
   goalX: number,
-  goalY: number
+  goalY: number,
+  minDist: number,
+  maxDist: number
 ) => {
   const extents = map.extents();
-  const queue = new SparseGrid<[number, [number, number][]]>(() => [
+  const queue = new SparseGrid<[number, Direction | -1]>(() => [
     Number.MAX_SAFE_INTEGER,
-    [],
-  ]).set(startX, startY, [0, [[startX, startY]]]);
-  const visited = new Set<GridKey>();
+    -1,
+  ]).set(startX, startY, [0, -1]);
+  const visited = new Set<`${GridKey},${number}`>();
+  const costs = new Map<`${GridKey},${number}`, number>();
 
   while (queue.size()) {
     // TODO: make a heap-based priority queue if we really need it
@@ -103,26 +100,41 @@ const dijkstra = (
       return current.value;
     }
 
-    visited.add(`${current.x},${current.y}`);
+    const visitKey = `${current.x},${current.y},${current.value[1]}` as const;
+    if (visited.has(visitKey)) {
+      continue;
+    }
 
-    for (const neighbour of map.adjacent(current.x, current.y, 1, false)) {
+    visited.add(visitKey);
+
+    for (let direction = 0; direction < DIRECTIONS.length; direction++) {
       if (
-        neighbour.x >= extents[0][0] &&
-        neighbour.x <= extents[0][1] &&
-        neighbour.y >= extents[1][0] &&
-        neighbour.y <= extents[1][1] &&
-        !visited.has(`${neighbour.x},${neighbour.y}`) &&
-        isMovementAllowed(current.value[1], neighbour.x, neighbour.y)
+        direction !== -1 &&
+        (direction === current.value[1] || direction % 4 === 2)
       ) {
-        queue.update(neighbour.x, neighbour.y, (prev) => {
-          const cost = current.value[0] + neighbour.value;
+        continue;
+      }
 
-          if (prev[0] <= cost) {
-            return prev;
-          }
+      let costChange = 0;
+      for (let dist = 1; dist <= maxDist; dist++) {
+        const newX = current.x + DIRECTIONS[direction][0] * dist;
+        const newY = current.y + DIRECTIONS[direction][1] * dist;
 
-          return [cost, [...current.value[1], [neighbour.x, neighbour.y]]];
-        });
+        costChange += map.get(newX, newY);
+        if (dist < minDist) {
+          continue;
+        }
+
+        const cost = current.value[0] + costChange;
+        if (
+          (costs.get(`${newX},${newY},${direction}`) ??
+            Number.MAX_SAFE_INTEGER) <= cost
+        ) {
+          continue;
+        }
+
+        costs.set(`${newX},${newY},${direction}`, cost);
+        queue.set(newX, newY, [cost, direction as Direction]);
       }
     }
   }
@@ -133,14 +145,14 @@ const dijkstra = (
 export const partA: Solver = (lines: string[]) => {
   const map = parseMap(lines);
   // TODO: not sure why but seemingly not getting the optimal path
-  const result = dijkstra(map, 0, 0, map.extents()[0][1], map.extents()[1][1]);
-  console.log(
-    result[1]
-      .reduce(
-        (acc, [x, y]) => acc.set(x, y, "#"),
-        map.clone() as SparseGrid<"#" | number>
-      )
-      .toString()
+  const result = dijkstra(
+    map,
+    0,
+    0,
+    map.extents()[0][1],
+    map.extents()[1][1],
+    1,
+    3
   );
   return result[0];
 };
