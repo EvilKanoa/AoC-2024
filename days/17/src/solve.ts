@@ -1,11 +1,4 @@
-import {
-  GridKey,
-  Heap,
-  MEMO_KEY_STATS,
-  Solver,
-  SparseGrid,
-  memoize,
-} from "shared";
+import { Heap, Solver, SparseGrid } from "shared";
 
 // \--- Day 17: Clumsy Crucible ---
 // --------------------------------
