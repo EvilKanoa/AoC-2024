@@ -110,7 +110,8 @@ const dijkstra = (
     for (let direction = 0; direction < DIRECTIONS.length; direction++) {
       if (
         direction !== -1 &&
-        (direction === current.value[1] || direction % 4 === 2)
+        (direction === current.value[1] ||
+          (direction + 2) % 4 === current.value[1])
       ) {
         continue;
       }
