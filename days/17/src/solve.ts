@@ -57,97 +57,28 @@ import { GridKey, MEMO_KEY_STATS, Solver, SparseGrid, memoize } from "shared";
 //
 // Directing the crucible from the lava pool to the machine parts factory, but not moving more than three consecutive blocks in the same direction, _what is the least heat loss it can incur?_
 
-type Digit = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0;
-
-enum Direction {
-  UP = "U",
-  DOWN = "D",
-  LEFT = "L",
-  RIGHT = "R",
-}
-
-const DIRECTION_OFFSET = {
-  [Direction.UP]: [0, -1],
-  [Direction.DOWN]: [0, 1],
-  [Direction.LEFT]: [-1, 0],
-  [Direction.RIGHT]: [1, 0],
-} as const;
-
-const opposite = (dir: Direction) =>
-  dir === Direction.UP
-    ? Direction.DOWN
-    : dir === Direction.DOWN
-    ? Direction.UP
-    : dir === Direction.LEFT
-    ? Direction.RIGHT
-    : Direction.LEFT;
-
 const parseMap = (lines: string[]) =>
   SparseGrid.fromLines<number>(
     lines,
     (c) => parseInt(c),
-    Number.MAX_SAFE_INTEGER
+    Number.MAX_SAFE_INTEGER,
+    (c) => `${c !== Number.MAX_SAFE_INTEGER ? c : ""} `,
+    0
   );
 
-const bruteforce = (map: SparseGrid<Digit>): number => {
-  const extents = map.extents();
+const positionsEqual = (a: [number, number], b: [number, number]) =>
+  a[0] === b[0] && a[1] === b[1];
 
-  const minimalFrom = memoize(
-    (
-      x: number,
-      y: number,
-      lastDirection: Direction,
-      currentRun: number,
-      visited: Set<GridKey>
-    ): number => {
-      if (
-        visited.has(`${x},${y}`) ||
-        currentRun >= 3 ||
-        x < extents[0][0] ||
-        x > extents[0][1] ||
-        y < extents[1][0] ||
-        y > extents[1][1]
-      ) {
-        return Number.MAX_SAFE_INTEGER;
-      }
+const isMovementAllowed = (path: [number, number][], x: number, y: number) => {
+  if (path.length < 4) {
+    return true;
+  } else if (positionsEqual(path[path.length - 2], [x, y])) {
+    return false;
+  }
 
-      if (x === extents[0][1] && y === extents[1][1]) {
-        return 0;
-      }
+  const tail = path.slice(-4);
 
-      const newVisited = new Set(visited).add(`${x},${y}`);
-
-      // return minimal option given all possible ways
-      const possibilities = Object.values(Direction)
-        .filter((dir) => dir !== opposite(lastDirection))
-        .map(
-          (dir) =>
-            [
-              dir,
-              x + DIRECTION_OFFSET[dir][0],
-              y + DIRECTION_OFFSET[dir][1],
-            ] as const
-        )
-        .map(
-          ([dir, newX, newY]) =>
-            map.get(newX, newY) +
-            minimalFrom(
-              newX,
-              newY,
-              dir,
-              dir === lastDirection ? currentRun + 1 : 0,
-              newVisited
-            )
-        );
-
-      return Math.min(...possibilities);
-    },
-    true
-  );
-
-  const result = minimalFrom(0, 0, Direction.RIGHT, 0, new Set());
-  console.log(minimalFrom[MEMO_KEY_STATS]);
-  return result;
+  return tail.some((v) => v[0] !== x) && tail.some((v) => v[1] !== y);
 };
 
 const dijkstra = (
@@ -156,33 +87,42 @@ const dijkstra = (
   startY: number,
   goalX: number,
   goalY: number
-): number => {
-  const queue = new SparseGrid<number>(Number.MAX_SAFE_INTEGER).set(
-    startX,
-    startY,
-    0
-  );
+) => {
+  const extents = map.extents();
+  const queue = new SparseGrid<[number, [number, number][]]>(() => [
+    Number.MAX_SAFE_INTEGER,
+    [],
+  ]).set(startX, startY, [0, [[startX, startY]]]);
   const visited = new Set<GridKey>();
 
   while (queue.size()) {
     // TODO: make a heap-based priority queue if we really need it
-    const current = queue.popBy((d) => -d);
+    const current = queue.popBy(([d]) => -d);
 
     if (current.x === goalX && current.y === goalY) {
       return current.value;
     }
 
     visited.add(`${current.x},${current.y}`);
-    console.log(`${current.x},${current.y}`);
+
     for (const neighbour of map.adjacent(current.x, current.y, 1, false)) {
-      const cost = current.value + neighbour.value;
-      if (queue.has(neighbour.x, neighbour.y)) {
-        // replace/update existing entry with new cost or somein?
-        queue.update(neighbour.x, neighbour.y, (prev) =>
-          prev < cost ? prev : cost
-        );
-      } else if (!visited.has(`${neighbour.x},${neighbour.y}`)) {
-        queue.set(neighbour.x, neighbour.y, cost);
+      if (
+        neighbour.x >= extents[0][0] &&
+        neighbour.x <= extents[0][1] &&
+        neighbour.y >= extents[1][0] &&
+        neighbour.y <= extents[1][1] &&
+        !visited.has(`${neighbour.x},${neighbour.y}`) &&
+        isMovementAllowed(current.value[1], neighbour.x, neighbour.y)
+      ) {
+        queue.update(neighbour.x, neighbour.y, (prev) => {
+          const cost = current.value[0] + neighbour.value;
+
+          if (prev[0] <= cost) {
+            return prev;
+          }
+
+          return [cost, [...current.value[1], [neighbour.x, neighbour.y]]];
+        });
       }
     }
   }
@@ -192,8 +132,17 @@ const dijkstra = (
 
 export const partA: Solver = (lines: string[]) => {
   const map = parseMap(lines);
-  // TODO: Need to account for max dist traveled forwards
-  return dijkstra(map, 0, 0, map.extents()[0][1], map.extents()[1][1]);
+  // TODO: not sure why but seemingly not getting the optimal path
+  const result = dijkstra(map, 0, 0, map.extents()[0][1], map.extents()[1][1]);
+  console.log(
+    result[1]
+      .reduce(
+        (acc, [x, y]) => acc.set(x, y, "#"),
+        map.clone() as SparseGrid<"#" | number>
+      )
+      .toString()
+  );
+  return result[0];
 };
 
 export const partB: Solver = (lines: string[]) => {
