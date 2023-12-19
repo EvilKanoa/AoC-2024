@@ -25,6 +25,28 @@ export interface GridCell<T> {
 const k = (x: number, y: number): GridKey => `${x},${y}`;
 
 export class SparseGrid<T> {
+  static fromLines = <T>(
+    lines: string[],
+    charParser: (char: string) => T,
+    defaultValurOrFactory: T | (() => T),
+    valueToStringFn?: ValueToStringFn<T>,
+    toStringPadding?: number
+  ): SparseGrid<T> => {
+    const grid = new SparseGrid<T>(
+      defaultValurOrFactory,
+      valueToStringFn,
+      toStringPadding
+    );
+
+    lines.forEach((line, y) =>
+      [...line].forEach((c, x) => {
+        grid.set(x, y, charParser(c));
+      })
+    );
+
+    return grid;
+  };
+
   private _default: DefaultFn<T>;
   private _valueToString: ValueToStringFn<T>;
   private _toStringPadding: number;
@@ -32,17 +54,17 @@ export class SparseGrid<T> {
   private _extents0Cache: Extents | null = null;
 
   constructor(
-    defaultValurOrFactory: T | (() => T),
+    defaultValueOrFactory: T | (() => T),
     valueToStringFn: ValueToStringFn<T> = (value) => `${value}`,
     toStringPadding = 1
   ) {
     this._valueToString = valueToStringFn;
     this._toStringPadding = toStringPadding;
 
-    if (typeof defaultValurOrFactory === "function") {
-      this._default = defaultValurOrFactory as () => T;
+    if (typeof defaultValueOrFactory === "function") {
+      this._default = defaultValueOrFactory as () => T;
     } else {
-      this._default = () => defaultValurOrFactory;
+      this._default = () => defaultValueOrFactory;
     }
   }
 
