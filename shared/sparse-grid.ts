@@ -45,6 +45,12 @@ export class SparseGrid<T> {
     return this;
   };
 
+  update = (x: number, y: number, updater: (prev: T) => T) => {
+    const prev = this.get(x, y);
+    this.set(x, y, updater(prev));
+    return this;
+  };
+
   get = (x: number, y: number): T => {
     const key = k(x, y);
     if (this._map.has(key)) {
