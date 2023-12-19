@@ -4,6 +4,11 @@
 export type GridKey = `${number},${number}`;
 
 /**
+ * Extents given in [[xMin, xMax], [yMin, yMax]]
+ */
+export type Extents = [[number, number], [number, number]];
+
+/**
  * Used to generate a value when an empty grid cell is accessed.
  * Can optionally accept the x and y coordinates of the cell.
  */
@@ -24,6 +29,7 @@ export class SparseGrid<T> {
   private _valueToString: ValueToStringFn<T>;
   private _toStringPadding: number;
   private _map = new Map<GridKey, GridCell<T>>();
+  private _extents0Cache: Extents | null = null;
 
   constructor(
     defaultValurOrFactory: T | (() => T),
@@ -42,6 +48,18 @@ export class SparseGrid<T> {
 
   set = (x: number, y: number, value: T) => {
     this._map.set(k(x, y), { value, x, y });
+
+    // invalidate extents cache if needed
+    if (
+      this._extents0Cache != null &&
+      (x < this._extents0Cache[0][0] ||
+        x > this._extents0Cache[0][1] ||
+        y < this._extents0Cache[1][0] ||
+        y > this._extents0Cache[1][1])
+    ) {
+      this._extents0Cache = null;
+    }
+
     return this;
   };
 
@@ -76,13 +94,17 @@ export class SparseGrid<T> {
   };
 
   /**
-   * Extends given in [[xMin, xMax], [yMin, yMax]]
+   * Extents given in [[xMin, xMax], [yMin, yMax]]
    */
-  extents = (padding = 0): [[number, number], [number, number]] => {
+  extents = (padding = 0): Extents => {
+    if (padding === 0 && this._extents0Cache != null) {
+      return this._extents0Cache;
+    }
+
     const extents = [
       [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER],
       [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER],
-    ] as [[number, number], [number, number]];
+    ] as Extents;
     this.eachSparse((x, y) =>
       [x, y].forEach((c, idx) => {
         extents[idx][0] = Math.min(c, extents[idx][0]);
@@ -93,6 +115,10 @@ export class SparseGrid<T> {
       extent[0] = extent[0] - padding;
       extent[1] = extent[1] + padding;
     });
+
+    if (padding === 0) {
+      this._extents0Cache = extents;
+    }
 
     return extents;
   };
