@@ -1,4 +1,4 @@
-import { Solver, keyBy } from "shared";
+import { Solver, keyBy, lcm } from "shared";
 
 // \--- Day 20: Pulse Propagation ---
 // ----------------------------------
@@ -185,11 +185,13 @@ const parseModules = (lines: string[]): Record<string, Module> => {
 
 const pulse = (
   modules: Record<string, Module>,
-  target = ""
+  target = "",
+  initial?: [string, string, boolean][]
 ): { high: number; low: number; targetNum: number } => {
   // [source, destination, pulse]
   // init with broadcaster pulses
   const queue: [string, string, boolean][] =
+    initial ??
     modules.broadcaster.destinations.map((destination) => [
       "broadcaster",
       destination,
@@ -207,7 +209,7 @@ const pulse = (
     if (pulse) high++;
     else low++;
 
-    if (pulse && destination === target) {
+    if (!pulse && destination === target) {
       targetNum++;
     }
 
@@ -259,25 +261,23 @@ export const partA: Solver = (lines: string[]) => {
 };
 
 export const partB: Solver = (lines: string[]) => {
-  const subgraphs = ["pg", "qs", "sp", "sv"];
-  const pulseCounts = subgraphs.map((target) => {
+  const subgraphs = [
+    ["bx", "sp"],
+    ["jq", "sv"],
+    ["nv", "qs"],
+    ["jp", "pg"],
+  ];
+  const pulseCounts = subgraphs.map(([start, target]) => {
     const modules = parseModules(lines);
     for (let pulseCount = 1; true; pulseCount++) {
-      const { targetNum } = pulse(modules, target);
-      console.log(targetNum, target);
+      const { targetNum } = pulse(modules, target, [
+        ["broadcaster", start, false],
+      ]);
       if (targetNum > 0) {
         return pulseCount;
       }
     }
   });
 
-  console.log(pulseCounts);
-
-  return 0;
-  // for (let pulseNum = 1; true; pulseNum++) {
-  //   const { rxNum } = pulse(modules);
-  //   if (rxNum === 1) {
-  //     return pulseNum;
-  //   }
-  // }
+  return pulseCounts.reduce(lcm);
 };

@@ -20,7 +20,7 @@ const expectedOutputA2 = 11687500;
 const expectedOutputB = 0;
 
 describe("part A", () => {
-  it.only("should pass", async () => {
+  it("should pass", async () => {
     expect(
       await partA(
         exampleInput1
