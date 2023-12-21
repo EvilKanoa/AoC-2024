@@ -12,7 +12,7 @@ export type Extents = [[number, number], [number, number]];
  * Used to generate a value when an empty grid cell is accessed.
  * Can optionally accept the x and y coordinates of the cell.
  */
-export type DefaultFn<T> = () => T;
+export type DefaultFn<T> = (x: number, y: number, self: SparseGrid<T>) => T;
 
 export type ValueToStringFn<T> = (value: T) => string;
 
@@ -28,7 +28,7 @@ export class SparseGrid<T> {
   static fromLines = <T>(
     lines: string[],
     charParser: (char: string) => T,
-    defaultValurOrFactory: T | (() => T),
+    defaultValurOrFactory: T | DefaultFn<T>,
     valueToStringFn?: ValueToStringFn<T>,
     toStringPadding?: number
   ): SparseGrid<T> => {
@@ -47,14 +47,14 @@ export class SparseGrid<T> {
     return grid;
   };
 
-  private _default: DefaultFn<T>;
+  private _default: (x: number, y: number) => T;
   private _valueToString: ValueToStringFn<T>;
   private _toStringPadding: number;
   private _map = new Map<GridKey, GridCell<T>>();
   private _extents0Cache: Extents | null = null;
 
   constructor(
-    defaultValueOrFactory: T | (() => T),
+    defaultValueOrFactory: T | DefaultFn<T>,
     valueToStringFn: ValueToStringFn<T> = (value) => `${value}`,
     toStringPadding = 1
   ) {
@@ -62,7 +62,8 @@ export class SparseGrid<T> {
     this._toStringPadding = toStringPadding;
 
     if (typeof defaultValueOrFactory === "function") {
-      this._default = defaultValueOrFactory as () => T;
+      this._default = (x, y) =>
+        (defaultValueOrFactory as DefaultFn<T>)(x, y, this);
     } else {
       this._default = () => defaultValueOrFactory;
     }
@@ -97,7 +98,7 @@ export class SparseGrid<T> {
       return this._map.get(key)!.value;
     }
 
-    return this._default();
+    return this._default(x, y);
   };
 
   has = (x: number, y: number): boolean => {
@@ -108,11 +109,17 @@ export class SparseGrid<T> {
     const key = k(x, y);
     const value = this._map.has(key)
       ? this._map.get(key)!.value
-      : this._default();
+      : this._default(x, y);
 
     this._map.delete(key);
+    this._extents0Cache = null;
 
     return value;
+  };
+
+  clear = (): void => {
+    this._map.clear();
+    this._extents0Cache = null;
   };
 
   /**
@@ -271,9 +278,9 @@ export class SparseGrid<T> {
     return clone;
   };
 
-  toString = () => {
-    const cells = [this._valueToString(this._default())] as string[];
-    const extents = this.extents(this._toStringPadding);
+  toString = (padding = this._toStringPadding) => {
+    const cells = [this._valueToString(this._default(0, 0))] as string[];
+    const extents = this.extents(padding);
 
     this.eachSparse((_x, _y, value) => cells.push(this._valueToString(value)));
     const cellWidth = Math.max(...cells.map((c) => c.length));
@@ -295,7 +302,10 @@ export class SparseGrid<T> {
 
   equals = (other: SparseGrid<T>, ignoreDifferingDefaults = false): boolean => {
     // unless ignoring, default values need to equal
-    if (!ignoreDifferingDefaults && this._default() !== other._default()) {
+    if (
+      !ignoreDifferingDefaults &&
+      this._default(0, 0) !== other._default(0, 0)
+    ) {
       return false;
     }
 
