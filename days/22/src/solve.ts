@@ -130,14 +130,17 @@ import { Solver, Tuple3, keyBy } from "shared";
 // Figure how the blocks will settle based on the snapshot. Once they've settled, consider disintegrating a single brick; _how many bricks could be safely chosen as the one to get disintegrated?_
 
 interface Cube {
-  id: number;
+  id: string;
   v1: Tuple3<number>;
   v2: Tuple3<number>;
-  supports: number[];
+  supportedBy: string[];
+  doesSupport: string[];
 }
 const [X, Y, Z] = [0, 1, 2] as const;
 
 type Cubes = Record<string, Cube>;
+
+const SHORT_NAMES: string[] = []; //[..."ABCDEFGH"];
 
 const parseCube = (line: string, id: number): Cube => {
   const [v1, v2] = line
@@ -145,7 +148,13 @@ const parseCube = (line: string, id: number): Cube => {
     .map((v) => v.split(",").map((n) => parseInt(n, 10)) as Tuple3<number>)
     .sort(([_x1, _y1, z1], [_x2, _y2, z2]) => z2 - z1);
 
-  return { id, v1, v2, supports: [] };
+  return {
+    id: SHORT_NAMES[id] ?? `${id}`,
+    v1,
+    v2,
+    doesSupport: [],
+    supportedBy: [],
+  };
 };
 
 const isColliding = (a: Cube, b: Cube): boolean => {
@@ -196,14 +205,17 @@ const getSupports = (
   test.v1[Z]--;
   test.v2[Z]--;
 
-  const concerns = new Set<number>();
-  for (
-    let z = Math.min(cube.v1[Z], cube.v2[Z]);
-    z <= Math.max(cube.v1[Z], cube.v2[Z]);
-    z++
-  ) {
-    (settledAt.get(z) ?? []).forEach(({ id }) => concerns.add(id));
-  }
+  const concerns = Object.values(cubes)
+    .filter((c) => c.id !== cube.id)
+    .map((c) => c.id);
+  // const concerns = new Set<string>();
+  // for (
+  //   let z = Math.min(cube.v1[Z], cube.v2[Z]);
+  //   z <= Math.max(cube.v1[Z], cube.v2[Z]);
+  //   z++
+  // ) {
+  //   (settledAt.get(z) ?? []).forEach(({ id }) => concerns.add(id));
+  // }
 
   return [...concerns]
     .map((id) => cubes[id])
@@ -224,10 +236,12 @@ const drop = (cubes: Cubes) => {
       cube.v2[Z]--;
       falling.push(cube);
     } else {
-      cube.supports = supports.map(({ id }) => id);
+      cube.supportedBy = supports.map(({ id }) => id);
+      supports.forEach(({ id }) => cubes[id].doesSupport.push(cube.id));
+
       for (
         let z = Math.min(cube.v1[Z], cube.v2[Z]);
-        z <= Math.max(cube.v1[Z], cube.v2[Z]);
+        z <= Math.max(cube.v1[Z], cube.v2[Z]) + 1;
         z++
       ) {
         settledAt.set(z, [...(settledAt.get(z) ?? []), cube]);
@@ -237,21 +251,32 @@ const drop = (cubes: Cubes) => {
 };
 
 const countRedundant = (cubes: Cubes): number => {
-  const redundant = new Set<number>();
+  const redundant = new Set<string>();
 
   for (const cube of Object.values(cubes)) {
-    if (cube.supports.length > 1) {
-      cube.supports.forEach((s) => redundant.add(s));
+    if (cube.supportedBy.length > 1) {
+      cube.supportedBy.forEach((s) => redundant.add(s));
+    }
+
+    if (cube.doesSupport.length === 0) {
+      redundant.add(cube.id);
     }
   }
 
-  return redundant.size;
+  // return redundant.size;
+
+  return Object.values(cubes).filter((c) =>
+    c.doesSupport.every(
+      (s) =>
+        Math.min(cubes[s].v1[Z], cubes[s].v2[Z]) <= 1 ||
+        cubes[s].supportedBy.filter((sb) => sb !== c.id).length > 0
+    )
+  ).length;
 };
 
 export const partA: Solver = (lines: string[]) => {
   const cubes = keyBy(lines.map(parseCube), "id");
   drop(cubes);
-  console.log(cubes);
   return countRedundant(cubes);
 };
 
