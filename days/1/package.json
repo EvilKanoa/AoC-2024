@@ -10,7 +10,6 @@
     "shared": "workspace:*"
   },
   "devDependencies": {
-    "0": "workspace:*",
     "bun-types": "latest"
   },
   "peerDependencies": {

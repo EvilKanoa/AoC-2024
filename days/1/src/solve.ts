@@ -1,4 +1,4 @@
-import { Solver } from "shared";
+import type { Solver } from "shared";
 
 export const partA: Solver = (lines: string[]) => 
 lines
@@ -10,7 +10,7 @@ lines
     }
 
     const [a, b] = [match[0], match[match.length - 1]];
-    const [valueA, valueB] = [parseInt(a), parseInt(b)];
+    const [valueA, valueB] = [Number.parseInt(a), Number.parseInt(b)];
     const value = valueA * 10 + valueB;
 
     return value;
@@ -43,7 +43,7 @@ export const partB: Solver = (lines: string[]) =>
       }
 
       const [a, b] = [match[0], match[match.length - 1]];
-      const [valueA, valueB] = [parseInt(a), parseInt(b)];
+      const [valueA, valueB] = [Number.parseInt(a), Number.parseInt(b)];
       const value = valueA * 10 + valueB;
 
       return value;

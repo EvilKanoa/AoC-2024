@@ -1,8 +1,7 @@
-# AoC-2023
+# AoC-2024
 
-- Trying a mix of C and TS
-- C stuff is in /src and uses Makefile to build
-- TS stuff is in /days and uses the bun setup below
+- Using TS
+- Solutions in /days and uses the bun setup below
 
 ## TS/bun borrowed from [sventi555/aoc-2023](https://github.com/sventi555/aoc-2023)
 
