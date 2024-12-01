@@ -19,7 +19,7 @@ if (isNaN(dayNum)) {
 }
 
 // load question and input from API
-const data = await fetchDay(2023, dayNum);
+const data = await fetchDay(2024, dayNum);
 
 const packagePath = `../days/${dayNum}`;
 if (existsSync(packagePath) && !opts.force) {

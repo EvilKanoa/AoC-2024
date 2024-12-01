@@ -1,4 +1,4 @@
-import { Solver } from "shared";
+import type { Solver } from "shared";
 
 <DAY_DESCRIPTION_1>
 export const partA: Solver = (lines: string[]) => {
