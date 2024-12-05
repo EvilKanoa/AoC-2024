@@ -135,5 +135,57 @@ export const partA: Solver = (lines: string[]) => {
 };
 
 export const partB: Solver = (lines: string[]) => {
-  return 0;
+  const { rules, updates } = parseInput(lines);
+
+  const updatesMap = updates.map((update) =>
+    update.reduce((acc, page, i) => {
+      acc[page] = i;
+      return acc;
+    }, {} as Record<number, number>)
+  );
+
+  const incorrectUpdates = updates.filter((_, i) =>
+    rules.some((rule) => {
+      const beforeIndex = updatesMap[i][rule.before];
+      const afterIndex = updatesMap[i][rule.after];
+
+      if (beforeIndex == null || afterIndex == null) {
+        return false;
+      }
+
+      return beforeIndex > afterIndex;
+    })
+  );
+
+  const sortedIncorrectUpdates = incorrectUpdates.map((update) => {
+    const sorted = [...update];
+    let correct = false;
+    while (!correct) {
+      correct = true;
+      for (const rule of rules) {
+        const beforeIndex = sorted.indexOf(rule.before);
+        const afterIndex = sorted.indexOf(rule.after);
+
+        if (beforeIndex === -1 || afterIndex === -1) {
+          // ignore this rule
+          continue;
+        }
+
+        if (beforeIndex > afterIndex) {
+          correct = false;
+          // swap to satisfy rule
+          [sorted[beforeIndex], sorted[afterIndex]] = [
+            sorted[afterIndex],
+            sorted[beforeIndex],
+          ];
+        }
+      }
+    }
+
+    return sorted;
+  });
+
+  return sortedIncorrectUpdates
+    .map((update) => update[Math.floor(update.length / 2)])
+    .reduce(sum);
 };

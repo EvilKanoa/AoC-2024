@@ -32,7 +32,7 @@ const exampleInput = `
 97,13,75,29,47
 `;
 const expectedOutputA = 143;
-const expectedOutputB = 0;
+const expectedOutputB = 123;
 
 describe("part A", () => {
   it("should pass", async () => {
