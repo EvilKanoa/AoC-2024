@@ -273,6 +273,10 @@ export class SparseGrid<T> {
       this._toStringPadding
     );
 
+    if (this._extents0Cache) {
+      clone._extents0Cache = [...this._extents0Cache];
+    }
+
     this.sparseCells().forEach((cell) => clone.set(cell.x, cell.y, cell.value));
 
     return clone;
