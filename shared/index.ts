@@ -13,6 +13,7 @@ export * from "./identity";
 export * from "./range";
 export * from "./heap";
 export * from "./error";
+export * from "./group-by";
 
 export type Solver = (lines: string[]) => Promise<number> | number;
 

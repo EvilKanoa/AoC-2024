@@ -225,7 +225,6 @@ export const partB: Solver = (lines: string[]) => {
   let loops = 0;
 
   for (let x = bounds[0][0]; x <= bounds[0][1]; x++) {
-    console.log(`x = ${x} and loops = ${loops}`);
     for (let y = bounds[1][0]; y <= bounds[1][1]; y++) {
       if ((x === startX && y === startY) || map.get(x, y) === Cell.OBSTACLE) {
         continue;
