@@ -14,6 +14,7 @@ export * from "./range";
 export * from "./heap";
 export * from "./error";
 export * from "./group-by";
+export * from "./find-from";
 
 export type Solver = (lines: string[]) => Promise<number> | number;
 
