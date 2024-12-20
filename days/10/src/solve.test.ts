@@ -12,7 +12,7 @@ const exampleInput = `
 10456732
 `;
 const expectedOutputA = 36;
-const expectedOutputB = 0;
+const expectedOutputB = 81;
 
 describe("part A", () => {
   it("should pass", async () => {

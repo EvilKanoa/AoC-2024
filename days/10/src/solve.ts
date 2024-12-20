@@ -106,5 +106,21 @@ export const partA: Solver = (lines: string[]) => {
 };
 
 export const partB: Solver = (lines: string[]) => {
-  return 0;
+  const topo = SparseGrid.fromLines(lines, (c) => Number.parseInt(c, 10), -1);
+  const trailheads = topo.sparseCells().filter((c) => c.value === 0);
+
+  const scoreFrom = (x: number, y: number): number => {
+    const elevation = topo.get(x, y);
+    if (elevation >= 9) return 1;
+
+    const paths = topo
+      .adjacent(x, y, 1, false)
+      .filter((c) => c.value === elevation + 1);
+
+    if (paths.length === 0) return 0;
+
+    return paths.map((p) => scoreFrom(p.x, p.y)).reduce(sum);
+  };
+
+  return trailheads.map((c) => scoreFrom(c.x, c.y)).reduce(sum);
 };
