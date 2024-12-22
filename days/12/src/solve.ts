@@ -1,4 +1,4 @@
-import { sum, type Solver } from "shared";
+import { SparseGrid, sum, type Solver } from "shared";
 
 // \--- Day 12: Garden Groups ---
 // ------------------------------
@@ -91,48 +91,153 @@ import { sum, type Solver } from "shared";
 //
 // _What is the total price of fencing all regions on your map?_
 
+const TILES = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+  "P",
+  "Q",
+  "R",
+  "S",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+] as const;
+
+const EMPTY = "." as const;
+
+type EmptyTile = typeof EMPTY;
+type Tile = (typeof TILES)[number];
+
 export const partA: Solver = (lines: string[]) => {
-  const checks = [
-    [0, -1],
-    [1, 0],
-    [0, 1],
-    [-1, 0],
-  ] as const;
-  const bounds = [lines[0].length - 1, lines.length - 1] as const;
-  const area: Record<string, number> = {};
-  const perimeter: Record<string, number> = {};
+  const map = SparseGrid.fromLines<Tile | EmptyTile>(
+    lines,
+    (c) => (TILES.includes(c as Tile) ? (c as Tile) : EMPTY),
+    EMPTY
+  );
+  const q = map.clone();
+  const area: Record<`${Tile}${number}`, number> = {};
+  const perimeter: Record<`${Tile}${number}`, number> = {};
+  const ids = TILES.reduce((acc, tile) => {
+    acc[tile] = 0;
+    return acc;
+  }, {} as Record<Tile, number>);
 
-  for (let y = 0; y < lines.length; y++) {
-    for (let x = 0; x < lines[y].length; x++) {
-      const tile = lines[y][x];
+  while (q.size()) {
+    // biome-ignore lint/style/noNonNullAssertion:
+    const seed = q.peek()!;
+    if (seed.value === EMPTY) continue;
 
-      area[tile] = (area[tile] ?? 0) + 1;
-      perimeter[tile] =
-        (perimeter[tile] ?? 0) +
-        checks
-          .map(([dx, dy]) => [x + dx, y + dy])
-          .map<number>(([x, y]) =>
-            x < 0 ||
-            x > bounds[0] ||
-            y < 0 ||
-            y > bounds[1] ||
-            lines[y][x] !== tile
-              ? 1
-              : 0
-          )
-          .reduce(sum);
+    const id = `${seed.value}${ids[seed.value]++}` as const;
+    area[id] = 0;
+    perimeter[id] = 0;
+    const search = [seed];
+
+    while (search.length) {
+      // biome-ignore lint/style/noNonNullAssertion:
+      const next = search.pop()!;
+      if (!q.has(next.x, next.y)) continue;
+
+      const neighbors = map
+        .adjacent(next.x, next.y, 1, false)
+        .filter((c) => c.value === seed.value);
+
+      area[id]++;
+      perimeter[id] += 4 - neighbors.length;
+      q.remove(next.x, next.y);
+      search.push(...neighbors.filter((n) => q.has(n.x, n.y)));
     }
   }
 
-  console.log("area", area);
-  console.log("perimeter", perimeter);
-
   return Object.entries(area)
-    .map(([region, area]) => area * perimeter[region])
+    .map(([id, a]) => a * perimeter[id as keyof typeof area])
     .reduce(sum);
 };
 
-//
+const CORNERS = [
+  [
+    [-1, 0],
+    [0, -1],
+  ],
+  [
+    [0, -1],
+    [1, 0],
+  ],
+  [
+    [1, 0],
+    [0, 1],
+  ],
+  [
+    [0, 1],
+    [-1, 0],
+  ],
+] as const;
+
 export const partB: Solver = (lines: string[]) => {
-  return 0;
+  const map = SparseGrid.fromLines<Tile | EmptyTile>(
+    lines,
+    (c) => (TILES.includes(c as Tile) ? (c as Tile) : EMPTY),
+    EMPTY
+  );
+  const q = map.clone();
+  const area: Record<`${Tile}${number}`, number> = {};
+  const corners: Record<`${Tile}${number}`, number> = {};
+  const ids = TILES.reduce((acc, tile) => {
+    acc[tile] = 0;
+    return acc;
+  }, {} as Record<Tile, number>);
+
+  while (q.size()) {
+    // biome-ignore lint/style/noNonNullAssertion:
+    const seed = q.peek()!;
+    if (seed.value === EMPTY) continue;
+
+    const id = `${seed.value}${ids[seed.value]++}` as const;
+    area[id] = 0;
+    corners[id] = 0;
+    const search = [seed];
+
+    while (search.length) {
+      // biome-ignore lint/style/noNonNullAssertion:
+      const next = search.pop()!;
+      if (!q.has(next.x, next.y)) continue;
+
+      area[id]++;
+      corners[id] += CORNERS.map(([[x1, y1], [x2, y2]]) => [
+        map.get(next.x + x1, next.y + y1),
+        map.get(next.x + x2, next.y + y2),
+        map.get(next.x + x1 + x2, next.y + y1 + y2),
+      ]).filter(
+        ([a, b, c]) =>
+          (a !== next.value && b !== next.value) ||
+          (a === next.value && b === next.value && c !== next.value)
+      ).length;
+      q.remove(next.x, next.y);
+      search.push(
+        ...map
+          .adjacent(next.x, next.y, 1, false)
+          .filter((n) => n.value === seed.value)
+      );
+    }
+  }
+
+  return Object.entries(area)
+    .map(([id, a]) => a * corners[id as keyof typeof area])
+    .reduce(sum);
 };

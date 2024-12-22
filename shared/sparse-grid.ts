@@ -244,6 +244,21 @@ export class SparseGrid<T> {
     return cells;
   };
 
+  pop = (): GridCell<T> => {
+    const next = this._map.values().next().value;
+    if (next == null) {
+      throw new Error("Cannot pop from empty grid!");
+    }
+
+    this.remove(next.x, next.y);
+
+    return next;
+  };
+
+  peek = (): GridCell<T> | null => {
+    return this._map.values().next().value ?? null;
+  };
+
   popBy = (valueFn: (item: T) => number): GridCell<T> => {
     if (this.size() === 0) {
       throw new Error("Cannot pop from empty grid!");

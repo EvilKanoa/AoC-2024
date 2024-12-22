@@ -14,7 +14,7 @@ MIIISIJEEE
 MMMISSJEEE
 `;
 const expectedOutputA = 1930;
-const expectedOutputB = 0;
+const expectedOutputB = 1206;
 
 describe("part A", () => {
   it("should pass", async () => {
