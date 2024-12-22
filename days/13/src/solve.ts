@@ -115,6 +115,21 @@ export const partA: Solver = (lines: string[]) => {
   return machines.map((m) => simulate(m) ?? 0).reduce(sum);
 };
 
+const fake = (m: Machine): number | null => {
+  // 1. determine if a or b is cheaper for the journey
+  const aCostPerUnitTowardsPrice =
+    3 /
+    (Math.sqrt(m.prize[0] ** 2 + m.prize[1] ** 2) -
+      Math.sqrt((m.prize[0] - m.a[0]) ** 2 + (m.prize[1] - m.a[1]) ** 2));
+  const bCostPerUnitTowardsPrice =
+    1 /
+    (Math.sqrt(m.prize[0] ** 2 + m.prize[1] ** 2) -
+      Math.sqrt((m.prize[0] - m.b[0]) ** 2 + (m.prize[1] - m.b[1]) ** 2));
+
+  console.log({ m, aCostPerUnitTowardsPrice, bCostPerUnitTowardsPrice });
+  return null;
+};
+
 export const partB: Solver = (lines: string[]) => {
   const machines = parseInput(lines).map((m) => ({
     ...m,
@@ -123,5 +138,6 @@ export const partB: Solver = (lines: string[]) => {
       m.prize[1] + 10000000000000,
     ] as Tuple<number>,
   }));
-  return machines.map((m) => simulate(m) ?? 0).reduce(sum);
+
+  return machines.map((m) => fake(m) ?? 0).reduce(sum);
 };
