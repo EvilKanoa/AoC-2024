@@ -115,27 +115,36 @@ export const partA: Solver = (lines: string[]) => {
   return machines.map((m) => simulate(m) ?? 0).reduce(sum);
 };
 
-const fake = (m: Machine): number | null => {
-  // 1. determine if a or b is cheaper for the journey
-  const aCostPerUnitTowardsPrice =
-    3 /
-    (Math.sqrt(m.prize[0] ** 2 + m.prize[1] ** 2) -
-      Math.sqrt((m.prize[0] - m.a[0]) ** 2 + (m.prize[1] - m.a[1]) ** 2));
-  const bCostPerUnitTowardsPrice =
-    1 /
-    (Math.sqrt(m.prize[0] ** 2 + m.prize[1] ** 2) -
-      Math.sqrt((m.prize[0] - m.b[0]) ** 2 + (m.prize[1] - m.b[1]) ** 2));
-
-  console.log({ m, aCostPerUnitTowardsPrice, bCostPerUnitTowardsPrice });
-  return null;
+const fake = ({ a, b, prize: p }: Machine): number | null => {
+  const y1 = (b[1] * (a[0] * p[1] - a[1] * p[0])) / (a[0] * b[1] - a[1] * b[0]);
+  const y2 = (a[1] * (b[0] * p[1] - b[1] * p[0])) / (b[0] * a[1] - b[1] * a[0]);
+  const [tokensA1, tokensB1] = [((p[1] - y1) / a[1]) * 3, y1 / b[1]];
+  const [tokensA2, tokensB2] = [((p[1] - y2) / a[1]) * 3, y2 / b[1]];
+  const [spend1, spend2] = [
+    Number.isInteger(tokensA1) && Number.isInteger(tokensB1)
+      ? tokensA1 + tokensB1
+      : Number.MAX_SAFE_INTEGER,
+    Number.isInteger(tokensA2) && Number.isInteger(tokensB2)
+      ? tokensA2 + tokensB2
+      : Number.MAX_SAFE_INTEGER,
+  ];
+  const bestSpend = spend1 > spend2 ? spend2 : spend1;
+  console.log({
+    spend1,
+    spend2,
+    bestSpend,
+    tokensA1,
+    tokensB1,
+  });
+  return bestSpend !== Number.MAX_SAFE_INTEGER ? bestSpend : null;
 };
 
 export const partB: Solver = (lines: string[]) => {
   const machines = parseInput(lines).map((m) => ({
     ...m,
     prize: [
-      m.prize[0] + 10000000000000,
-      m.prize[1] + 10000000000000,
+      m.prize[0] + 10_000_000_000_000,
+      m.prize[1] + 10_000_000_000_000,
     ] as Tuple<number>,
   }));
 

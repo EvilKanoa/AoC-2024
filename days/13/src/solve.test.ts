@@ -19,7 +19,7 @@ Button B: X+27, Y+71
 Prize: X=18641, Y=10279
 `;
 const expectedOutputA = 480;
-const expectedOutputB = 0;
+const expectedOutputB = 875318608908;
 
 describe("part A", () => {
   it("should pass", async () => {
