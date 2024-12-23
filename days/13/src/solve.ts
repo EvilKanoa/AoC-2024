@@ -116,27 +116,13 @@ export const partA: Solver = (lines: string[]) => {
 };
 
 const fake = ({ a, b, prize: p }: Machine): number | null => {
-  const y1 = (b[1] * (a[0] * p[1] - a[1] * p[0])) / (a[0] * b[1] - a[1] * b[0]);
-  const y2 = (a[1] * (b[0] * p[1] - b[1] * p[0])) / (b[0] * a[1] - b[1] * a[0]);
-  const [tokensA1, tokensB1] = [((p[1] - y1) / a[1]) * 3, y1 / b[1]];
-  const [tokensA2, tokensB2] = [((p[1] - y2) / a[1]) * 3, y2 / b[1]];
-  const [spend1, spend2] = [
-    Number.isInteger(tokensA1) && Number.isInteger(tokensB1)
-      ? tokensA1 + tokensB1
-      : Number.MAX_SAFE_INTEGER,
-    Number.isInteger(tokensA2) && Number.isInteger(tokensB2)
-      ? tokensA2 + tokensB2
-      : Number.MAX_SAFE_INTEGER,
-  ];
-  const bestSpend = spend1 > spend2 ? spend2 : spend1;
-  console.log({
-    spend1,
-    spend2,
-    bestSpend,
-    tokensA1,
-    tokensB1,
-  });
-  return bestSpend !== Number.MAX_SAFE_INTEGER ? bestSpend : null;
+  const y = (b[1] * (a[0] * p[1] - a[1] * p[0])) / (a[0] * b[1] - a[1] * b[0]);
+  const [ta, tb] = [(p[1] - y) / a[1], y / b[1]].map(Math.round);
+  const spend =
+    a[0] * ta + b[0] * tb === p[0] && a[1] * ta + b[1] * tb === p[1]
+      ? ta * 3 + tb
+      : null;
+  return spend;
 };
 
 export const partB: Solver = (lines: string[]) => {
